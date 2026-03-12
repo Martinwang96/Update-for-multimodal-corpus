@@ -1,0 +1,3 @@
+﻿module,event_name,event_name_field,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,start_time_str,end_time_str,peak_value,peak_metric,threshold,units,status,error,source_csv
+rotation,转动,event_label,91,94,3.033,3.133,0.100,00:03.033,00:03.100,2.12,angle_sum_abs,0.5938726231941218,,ok,,D:\桌面文件\项目代码优化\躯体\combined_2d_runs\demo-for-test\analysis\demo-for-test_orientation2d_analysis\demo-for-test-tonly_events_orientation2d_thresh0.6.csv
+rotation,转动,event_label,193,198,6.433,6.600,0.167,00:06.433,00:06.567,3.90,angle_sum_abs,0.5938726231941218,,ok,,D:\桌面文件\项目代码优化\躯体\combined_2d_runs\demo-for-test\analysis\demo-for-test_orientation2d_analysis\demo-for-test-tonly_events_orientation2d_thresh0.6.csv

@@ -1,0 +1,3 @@
+﻿event_label,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,angle_sum_abs,start_time_str,end_time_str
+转动,91,94,3.033,3.133,0.100,2.12,00:03.033,00:03.100
+转动,193,198,6.433,6.600,0.167,3.90,00:06.433,00:06.567

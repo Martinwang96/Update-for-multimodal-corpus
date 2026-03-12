@@ -1,0 +1,3 @@
+﻿event_type,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,duration_frames,peak_deviation_distance_x,path_length_x,net_displacement_x,max_inst_displacement_x,speed_x_abs_mean,speed_x_abs_max,accel_x_abs_mean,accel_x_abs_max,units_pos,units_vel,units_acc,start_time_str,end_time_str
+移动,111,124,3.700,4.167,0.467,14,7.663,8.201,-7.561,0.894,17.579,29.779,71858.394,167208.661,像素,像素/s,像素/s²,00:03.700,00:04.133
+移动,211,241,7.033,8.067,1.033,31,11.595,31.400,29.584,2.968,30.409,72.518,162962.324,354703.100,像素,像素/s,像素/s²,00:07.033,00:08.033

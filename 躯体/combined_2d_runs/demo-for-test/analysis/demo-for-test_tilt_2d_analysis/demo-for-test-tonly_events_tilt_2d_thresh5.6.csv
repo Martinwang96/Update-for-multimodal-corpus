@@ -1,0 +1,2 @@
+﻿event_type,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,duration_frames,max_angle_0_90,avg_angle_0_90,units_angle,threshold_0_90_used,start_time_str,end_time_str
+倾斜,103,174,3.433,5.833,2.400,72,29.43,14.74,度,5.58,00:03.433,00:05.800

@@ -1,0 +1,166 @@
+{
+  "entry_mode": "video",
+  "selected_json_mode": "tonly",
+  "json_input_path": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test-tonly.json",
+  "run_root": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test",
+  "analysis_root": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis",
+  "recognition": {
+    "video_path": "D:\\桌面文件\\demo-for-test.mp4",
+    "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition",
+    "predictions_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions",
+    "vis_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\vis",
+    "raw_json_path": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test.json",
+    "tonly_json_path": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test-tonly.json",
+    "pose2d": "human",
+    "batch_size": 16,
+    "device_requested": "auto",
+    "device_used": "cpu",
+    "save_vis": false,
+    "score_thresh": 0.6,
+    "frame_count": 242,
+    "inference_finished": true,
+    "inference_message": "推理已结束，JSON文件已生成。",
+    "runner_stdout": "Loads checkpoint by http backend from path: https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-aic-coco_pt-aic-coco_420e-256x192-63eb25f7_20230126.pth\n03/12 00:25:18 - mmengine - WARNING - Failed to search registry with scope \"mmpose\" in the \"function\" registry tree. As a workaround, the current \"function\" registry in \"mmengine\" is used to build instance. This may cause unexpected failure when running the built modules. Please check whether \"mmpose\" is a correct scope, or whether the registry is initialized.\nLoads checkpoint by http backend from path: https://download.openmmlab.com/mmdetection/v3.0/rtmdet/rtmdet_m_8xb32-300e_coco/rtmdet_m_8xb32-300e_coco_20220719_112220-229f527c.pth\nThe model and loaded state dict do not match exactly\n\nunexpected key in source state_dict: data_preprocessor.mean, data_preprocessor.std\n\n03/12 00:25:19 - mmengine - WARNING - Failed to search registry with scope \"mmdet\" in the \"function\" registry tree. As a workaround, the current \"function\" registry in \"mmengine\" is used to build instance. This may cause unexpected failure when running the built modules. Please check whether \"mmdet\" is a correct scope, or whether the registry is initialized.\nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 0, \"frames_total\": 242}\nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 1, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 10, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 20, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 30, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 40, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 50, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 60, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 70, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 80, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 90, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 100, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 110, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 120, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 130, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 140, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 150, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 160, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 170, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 180, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 190, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 200, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 210, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 220, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 230, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 240, \"frames_total\": 242}\nInference ----------------------------------------   \nInference ----------------------------------------   \nPROGRESS_JSON:{\"stage\": \"recognition\", \"frames_done\": 242, \"frames_total\": 242}\nE:\\anaconda3\\envs\\openmmlab\\lib\\site-packages\\mmengine\\visualization\\visualizer.py:196: UserWarning: Failed to add <class 'mmengine.visualization.vis_backend.LocalVisBackend'>, please provide the `save_dir` argument.\n  warnings.warn(f'Failed to add {vis_backend.__class__}, '\nE:\\anaconda3\\envs\\openmmlab\\lib\\site-packages\\torch\\functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at C:\\actions-runner\\_work\\pytorch\\pytorch\\builder\\windows\\pytorch\\aten\\src\\ATen\\native\\TensorShape.cpp:3484.)\n  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]\n[body-recognition] success\nraw_json_path: D:\\�����ļ�\\��Ŀ�����Ż�\\����\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test.json\ntonly_json_path: D:\\�����ļ�\\��Ŀ�����Ż�\\����\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test-tonly.json\n[body-recognition] inference finished: �����ѽ�����JSON�ļ������ɡ�\nsummary_json: D:\\�����ļ�\\��Ŀ�����Ż�\\����\\combined_2d_runs\\demo-for-test\\recognition\\recognition_summary.json",
+    "runner_stderr": ""
+  },
+  "fps": 30.0,
+  "min_confidence": 0.6,
+  "parallel": false,
+  "parallel_requested": false,
+  "parallel_used": false,
+  "parallel_fallback_error": "",
+  "selected_modules": [
+    "tilt",
+    "shrug",
+    "displacement",
+    "rotation"
+  ],
+  "params": {
+    "tilt": {
+      "smooth_window": 11,
+      "smooth_poly": 3,
+      "outlier_diff_threshold": 25.0,
+      "threshold_override": null,
+      "min_duration_sec": 0.1,
+      "max_duration_sec": 5.0,
+      "merge_gap_sec": 0.3
+    },
+    "shrug": {
+      "smooth_window": 7,
+      "smooth_poly": 2,
+      "baseline_window_sec": 1.5,
+      "threshold_override": null,
+      "min_duration_sec": 0.15,
+      "max_duration_sec": 2.0,
+      "merge_gap_sec": 0.3
+    },
+    "displacement": {
+      "smooth_window": 7,
+      "smooth_poly": 2,
+      "baseline_window_sec": 2.0,
+      "kinematics_window": 9,
+      "kinematics_poly": 2,
+      "threshold_pa_override": null,
+      "threshold_move_override": null,
+      "min_duration_sec": 0.2,
+      "max_duration_sec": 10.0,
+      "merge_gap_sec": 0.4
+    },
+    "rotation": {
+      "left_shoulder_idx": 5,
+      "right_shoulder_idx": 6,
+      "smooth_window": 11,
+      "smooth_poly": 3,
+      "threshold_override": null,
+      "min_duration_sec": 0.1,
+      "max_duration_sec": 2.0,
+      "merge_gap_sec": 0.3
+    }
+  },
+  "results": [
+    {
+      "module": "tilt",
+      "label": "Tilt(2D)",
+      "status": "ok",
+      "event_count": 1,
+      "threshold": 5.577983707588592,
+      "max_value": 29.427122903963635,
+      "csv": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_tilt_2d_analysis\\demo-for-test-tonly_events_tilt_2d_thresh5.6.csv",
+      "threshold_plot": null,
+      "analysis_plot": null,
+      "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_tilt_2d_analysis",
+      "elapsed_sec": 0.04599099999995815
+    },
+    {
+      "module": "shrug",
+      "label": "Shrug(2D rel-lift)",
+      "status": "ok",
+      "event_count": 2,
+      "threshold": 4.9572670886987975,
+      "max_value": 14.840690561119843,
+      "csv": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_shrug_2d_relDist_analysis\\demo-for-test-tonly_events_shrug_2d_relDist_thresh5.0px.csv",
+      "threshold_plot": null,
+      "analysis_plot": null,
+      "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_shrug_2d_relDist_analysis",
+      "elapsed_sec": 0.29023319999998876
+    },
+    {
+      "module": "displacement",
+      "label": "Displacement(2D X deviation)",
+      "status": "ok",
+      "event_count": 2,
+      "event_detail": {
+        "movement": 2,
+        "pose_adjustment": 0
+      },
+      "threshold": {
+        "pose_adjustment": 6.009186688622211,
+        "movement": 7.416271886361813
+      },
+      "max_value": 11.594944858781503,
+      "csv": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_deviationX_analysis_body_center\\demo-for-test-tonly_events_body_center_devX_pa6.0_mv7.4.csv",
+      "threshold_plot": null,
+      "analysis_plot": null,
+      "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_deviationX_analysis_body_center",
+      "elapsed_sec": 0.14247769999997217
+    },
+    {
+      "module": "rotation",
+      "label": "Rotation(2D orientation)",
+      "status": "ok",
+      "event_count": 2,
+      "threshold": 0.5938726231941218,
+      "max_value": 2.085729019725524,
+      "csv": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_orientation2d_analysis\\demo-for-test-tonly_events_orientation2d_thresh0.6.csv",
+      "threshold_plot": null,
+      "analysis_plot": null,
+      "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\demo-for-test_orientation2d_analysis",
+      "elapsed_sec": 0.04637019999995573
+    }
+  ],
+  "layer_csv_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\layer_csv",
+  "layer_csv_files": {
+    "tilt": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\layer_csv\\tilt_layer.csv",
+    "shrug": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\layer_csv\\shrug_layer.csv",
+    "displacement": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\layer_csv\\displacement_layer.csv",
+    "rotation": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\analysis\\layer_csv\\rotation_layer.csv"
+  },
+  "layer_csv_status": {
+    "tilt": "ok",
+    "shrug": "ok",
+    "displacement": "ok",
+    "rotation": "ok"
+  },
+  "timing": {
+    "total_elapsed_sec": 167.86524740000004,
+    "recognition_elapsed_sec": 167.31254790000003,
+    "processing_elapsed_sec": 0.5252616999999873,
+    "csv_export_elapsed_sec": 0.025762200000031044,
+    "module_elapsed_sec": {
+      "tilt": 0.04599099999995815,
+      "shrug": 0.29023319999998876,
+      "displacement": 0.14247769999997217,
+      "rotation": 0.04637019999995573
+    }
+  }
+}

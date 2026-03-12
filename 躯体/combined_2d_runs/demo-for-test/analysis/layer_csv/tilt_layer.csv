@@ -1,0 +1,2 @@
+﻿module,event_name,event_name_field,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,start_time_str,end_time_str,peak_value,peak_metric,threshold,units,status,error,source_csv
+tilt,倾斜,event_type,103,174,3.433,5.833,2.400,00:03.433,00:05.800,29.43,max_angle_0_90,5.577983707588592,度,ok,,D:\桌面文件\项目代码优化\躯体\combined_2d_runs\demo-for-test\analysis\demo-for-test_tilt_2d_analysis\demo-for-test-tonly_events_tilt_2d_thresh5.6.csv

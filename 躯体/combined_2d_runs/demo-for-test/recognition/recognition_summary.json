@@ -1,0 +1,17 @@
+{
+  "video_path": "D:\\桌面文件\\demo-for-test.mp4",
+  "output_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition",
+  "predictions_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions",
+  "vis_dir": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\vis",
+  "raw_json_path": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test.json",
+  "tonly_json_path": "D:\\桌面文件\\项目代码优化\\躯体\\combined_2d_runs\\demo-for-test\\recognition\\predictions\\demo-for-test-tonly.json",
+  "pose2d": "human",
+  "batch_size": 16,
+  "device_requested": "auto",
+  "device_used": "cpu",
+  "save_vis": false,
+  "score_thresh": 0.6,
+  "frame_count": 242,
+  "inference_finished": true,
+  "inference_message": "推理已结束，JSON文件已生成。"
+}

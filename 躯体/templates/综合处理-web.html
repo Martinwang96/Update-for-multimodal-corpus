@@ -1,0 +1,525 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>躯体2D综合处理平台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='综合处理-web.css') }}" />
+</head>
+<body>
+  <main class="page">
+    <header class="page-head">
+      <h1>躯体2D综合处理平台</h1>
+      <p>视频入口 -> body-recognition -> 4模块分析 -> 层级CSV与汇总</p>
+    </header>
+
+    <section class="panel progress-panel">
+      <h2>流程进度</h2>
+      <div class="stage-bar" id="stageBar">
+        <div class="stage-item pending" data-stage="prepare">
+          <div class="stage-dot"></div>
+          <div class="stage-text">准备阶段</div>
+        </div>
+        <div class="stage-link" data-link="prepare-recognition"></div>
+        <div class="stage-item pending" data-stage="recognition">
+          <div class="stage-dot"></div>
+          <div class="stage-text">识别阶段</div>
+        </div>
+        <div class="stage-link" data-link="recognition-processing"></div>
+        <div class="stage-item pending" data-stage="processing">
+          <div class="stage-dot"></div>
+          <div class="stage-text">数据处理阶段</div>
+        </div>
+      </div>
+      <div class="overall-progress">
+        <div class="overall-progress-fill" id="overallProgressFill" style="width:0%"></div>
+      </div>
+      <div class="progress-metrics">
+        <span id="progressText">等待开始</span>
+        <span id="elapsedText">已耗时: --</span>
+        <span id="etaText">预计剩余: --</span>
+      </div>
+    </section>
+
+    <section class="panel error-panel hidden" id="runtimeErrorPanel">
+      <h2>运行错误</h2>
+      <pre id="runtimeErrorText"></pre>
+    </section>
+
+    <form id="pipelineForm" class="form-stack">
+      <section class="panel">
+        <h2>视频输入</h2>
+        <div class="grid two">
+          <div class="field wide">
+            <label for="input_path">视频路径</label>
+            <input id="input_path" name="input_path" value="{{ form.input_path }}" placeholder="例如：D:\\data\\demo.mp4" />
+          </div>
+          <div class="field wide">
+            <label for="output_root">输出根目录</label>
+            <input id="output_root" name="output_root" value="{{ form.output_root }}" />
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <button class="btn ghost" id="btnPreviewCover" type="button">预览首帧</button>
+          <button class="btn ghost" id="btnLoadFullVideo" type="button">加载完整视频预览</button>
+          <span class="preview-hint" id="previewHint">默认仅加载首帧，提升响应速度。</span>
+        </div>
+
+        <div class="preview-box">
+          <div class="preview-head">输入视频预览</div>
+          <img id="coverPreviewImg" alt="视频首帧预览" class="cover-preview hidden" />
+          <video id="fullVideoPreview" controls preload="metadata" class="hidden"></video>
+          <div class="empty-preview" id="emptyPreview">输入有效视频路径后可预览。</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>body-recognition 参数</h2>
+        <div class="grid three">
+          <div class="field wide"><label>识别Python路径</label><input name="rec_python" value="{{ form.rec_python }}" /></div>
+          <div class="field"><label>pose2d</label><input name="rec_pose2d" value="{{ form.rec_pose2d }}" /></div>
+          <div class="field"><label>batch_size</label><input name="rec_batch_size" value="{{ form.rec_batch_size }}" /></div>
+          <div class="field"><label>device</label><input name="rec_device" value="{{ form.rec_device }}" /></div>
+          <div class="field"><label>score_thresh</label><input name="rec_score_thresh" value="{{ form.rec_score_thresh }}" /></div>
+          <div class="field">
+            <label>后续分析JSON来源</label>
+            <select name="rec_json_source">
+              <option value="tonly" {% if form.rec_json_source == 'tonly' %}selected{% endif %}>tonly</option>
+              <option value="raw" {% if form.rec_json_source == 'raw' %}selected{% endif %}>raw</option>
+            </select>
+          </div>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" name="rec_save_vis" {% if form.rec_save_vis %}checked{% endif %} /> 生成识别可视化视频</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>全局参数</h2>
+        <div class="grid three">
+          <div class="field"><label>FPS</label><input name="fps" value="{{ form.fps }}" /></div>
+          <div class="field"><label>最小关键点置信度(0~1)</label><input name="min_confidence" value="{{ form.min_confidence }}" /></div>
+          <div class="field"><label>模块选择</label>
+            <div class="checks inline">
+              <label><input type="checkbox" name="modules" value="tilt" {% if 'tilt' in form.modules %}checked{% endif %}/>倾斜</label>
+              <label><input type="checkbox" name="modules" value="shrug" {% if 'shrug' in form.modules %}checked{% endif %}/>耸肩</label>
+              <label><input type="checkbox" name="modules" value="displacement" {% if 'displacement' in form.modules %}checked{% endif %}/>位移</label>
+              <label><input type="checkbox" name="modules" value="rotation" {% if 'rotation' in form.modules %}checked{% endif %}/>转动</label>
+            </div>
+          </div>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" name="save_plots" {% if form.save_plots %}checked{% endif %}/> 保存分析图（会更慢）</label>
+          <label><input type="checkbox" name="parallel" {% if form.parallel %}checked{% endif %}/> 并行执行模块</label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>模块参数（保持原逻辑）</h2>
+        <div class="grid two cards">
+          <article class="module-card">
+            <h3>倾斜</h3>
+            <div class="field"><label>smooth_window(奇数>=3)</label><input name="tilt_smooth_window" value="{{ form.tilt_smooth_window }}" /></div>
+            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="tilt_smooth_poly" value="{{ form.tilt_smooth_poly }}" /></div>
+            <div class="field"><label>outlier_diff_threshold</label><input name="tilt_outlier_diff_threshold" value="{{ form.tilt_outlier_diff_threshold }}" /></div>
+            <div class="field"><label>threshold_override(可空)</label><input name="tilt_threshold_override" value="{{ form.tilt_threshold_override }}" /></div>
+            <div class="field"><label>min_duration_sec</label><input name="tilt_min_duration_sec" value="{{ form.tilt_min_duration_sec }}" /></div>
+            <div class="field"><label>max_duration_sec</label><input name="tilt_max_duration_sec" value="{{ form.tilt_max_duration_sec }}" /></div>
+            <div class="field"><label>merge_gap_sec</label><input name="tilt_merge_gap_sec" value="{{ form.tilt_merge_gap_sec }}" /></div>
+          </article>
+
+          <article class="module-card">
+            <h3>耸肩</h3>
+            <div class="field"><label>smooth_window(奇数>=3)</label><input name="shrug_smooth_window" value="{{ form.shrug_smooth_window }}" /></div>
+            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="shrug_smooth_poly" value="{{ form.shrug_smooth_poly }}" /></div>
+            <div class="field"><label>baseline_window_sec</label><input name="shrug_baseline_window_sec" value="{{ form.shrug_baseline_window_sec }}" /></div>
+            <div class="field"><label>threshold_override(可空)</label><input name="shrug_threshold_override" value="{{ form.shrug_threshold_override }}" /></div>
+            <div class="field"><label>min_duration_sec</label><input name="shrug_min_duration_sec" value="{{ form.shrug_min_duration_sec }}" /></div>
+            <div class="field"><label>max_duration_sec</label><input name="shrug_max_duration_sec" value="{{ form.shrug_max_duration_sec }}" /></div>
+            <div class="field"><label>merge_gap_sec</label><input name="shrug_merge_gap_sec" value="{{ form.shrug_merge_gap_sec }}" /></div>
+          </article>
+
+          <article class="module-card">
+            <h3>位移</h3>
+            <div class="field"><label>smooth_window(奇数>=3)</label><input name="displacement_smooth_window" value="{{ form.displacement_smooth_window }}" /></div>
+            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="displacement_smooth_poly" value="{{ form.displacement_smooth_poly }}" /></div>
+            <div class="field"><label>baseline_window_sec</label><input name="displacement_baseline_window_sec" value="{{ form.displacement_baseline_window_sec }}" /></div>
+            <div class="field"><label>kinematics_window(奇数>=3)</label><input name="displacement_kinematics_window" value="{{ form.displacement_kinematics_window }}" /></div>
+            <div class="field"><label>kinematics_poly(1<=poly&lt;window)</label><input name="displacement_kinematics_poly" value="{{ form.displacement_kinematics_poly }}" /></div>
+            <div class="field"><label>threshold_pa_override(可空)</label><input name="displacement_threshold_pa_override" value="{{ form.displacement_threshold_pa_override }}" /></div>
+            <div class="field"><label>threshold_move_override(可空)</label><input name="displacement_threshold_move_override" value="{{ form.displacement_threshold_move_override }}" /></div>
+            <div class="field"><label>min_duration_sec</label><input name="displacement_min_duration_sec" value="{{ form.displacement_min_duration_sec }}" /></div>
+            <div class="field"><label>max_duration_sec</label><input name="displacement_max_duration_sec" value="{{ form.displacement_max_duration_sec }}" /></div>
+            <div class="field"><label>merge_gap_sec</label><input name="displacement_merge_gap_sec" value="{{ form.displacement_merge_gap_sec }}" /></div>
+          </article>
+
+          <article class="module-card">
+            <h3>转动</h3>
+            <div class="field"><label>left_shoulder_idx</label><input name="rotation_left_shoulder_idx" value="{{ form.rotation_left_shoulder_idx }}" /></div>
+            <div class="field"><label>right_shoulder_idx</label><input name="rotation_right_shoulder_idx" value="{{ form.rotation_right_shoulder_idx }}" /></div>
+            <div class="field"><label>smooth_window(奇数>=3)</label><input name="rotation_smooth_window" value="{{ form.rotation_smooth_window }}" /></div>
+            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="rotation_smooth_poly" value="{{ form.rotation_smooth_poly }}" /></div>
+            <div class="field"><label>threshold_override(可空)</label><input name="rotation_threshold_override" value="{{ form.rotation_threshold_override }}" /></div>
+            <div class="field"><label>min_duration_sec</label><input name="rotation_min_duration_sec" value="{{ form.rotation_min_duration_sec }}" /></div>
+            <div class="field"><label>max_duration_sec</label><input name="rotation_max_duration_sec" value="{{ form.rotation_max_duration_sec }}" /></div>
+            <div class="field"><label>merge_gap_sec</label><input name="rotation_merge_gap_sec" value="{{ form.rotation_merge_gap_sec }}" /></div>
+          </article>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button class="btn" id="btnStart" type="submit">开始综合分析</button>
+      </div>
+    </form>
+
+    <section class="panel hidden" id="resultPanel">
+      <h2>运行结果</h2>
+      <div class="result-grid" id="resultMeta"></div>
+
+      <h3>层级CSV文件</h3>
+      <div class="list-grid" id="layerCsvList"></div>
+
+      <h3>模块结果</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>模块</th>
+            <th>状态</th>
+            <th>事件数</th>
+            <th>原始CSV</th>
+            <th>输出目录</th>
+            <th>耗时(秒)</th>
+          </tr>
+        </thead>
+        <tbody id="moduleResultBody"></tbody>
+      </table>
+
+      <h3>完整summary</h3>
+      <pre id="summaryPre"></pre>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const endpoints = {
+    createJob: "{{ url_for('create_job') }}",
+    getJobBase: "/api/jobs/",
+    previewCover: "{{ url_for('preview_cover') }}",
+    previewVideo: "{{ url_for('preview_video') }}",
+  };
+
+  const form = document.getElementById("pipelineForm");
+  const btnStart = document.getElementById("btnStart");
+  const inputPath = document.getElementById("input_path");
+  const progressFill = document.getElementById("overallProgressFill");
+  const progressText = document.getElementById("progressText");
+  const elapsedText = document.getElementById("elapsedText");
+  const etaText = document.getElementById("etaText");
+  const runtimeErrorPanel = document.getElementById("runtimeErrorPanel");
+  const runtimeErrorText = document.getElementById("runtimeErrorText");
+  const resultPanel = document.getElementById("resultPanel");
+  const resultMeta = document.getElementById("resultMeta");
+  const layerCsvList = document.getElementById("layerCsvList");
+  const moduleResultBody = document.getElementById("moduleResultBody");
+  const summaryPre = document.getElementById("summaryPre");
+  const coverImg = document.getElementById("coverPreviewImg");
+  const fullVideo = document.getElementById("fullVideoPreview");
+  const emptyPreview = document.getElementById("emptyPreview");
+  const previewHint = document.getElementById("previewHint");
+  const btnPreviewCover = document.getElementById("btnPreviewCover");
+  const btnLoadFullVideo = document.getElementById("btnLoadFullVideo");
+
+  let activeJobId = "";
+  let pollTimer = null;
+
+  function escapeHtml(v) {
+    return String(v ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function formatSec(v) {
+    if (v === null || v === undefined || Number.isNaN(Number(v))) return "--";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "--";
+    if (n < 60) return `${n.toFixed(1)}s`;
+    const m = Math.floor(n / 60);
+    const s = n % 60;
+    return `${m}m ${s.toFixed(0)}s`;
+  }
+
+  function setStageItem(stage, state) {
+    const el = document.querySelector(`.stage-item[data-stage="${stage}"]`);
+    if (!el) return;
+    el.classList.remove("pending", "active", "done", "error");
+    el.classList.add(state);
+  }
+
+  function setLinkDone(linkKey, done) {
+    const el = document.querySelector(`.stage-link[data-link="${linkKey}"]`);
+    if (!el) return;
+    if (done) el.classList.add("done");
+    else el.classList.remove("done");
+  }
+
+  function applyStageState(status, stage) {
+    setStageItem("prepare", "pending");
+    setStageItem("recognition", "pending");
+    setStageItem("processing", "pending");
+    setLinkDone("prepare-recognition", false);
+    setLinkDone("recognition-processing", false);
+
+    if (status === "queued") {
+      setStageItem("prepare", "active");
+      return;
+    }
+
+    if (status === "running") {
+      if (stage === "prepare") {
+        setStageItem("prepare", "active");
+      } else if (stage === "recognition") {
+        setStageItem("prepare", "done");
+        setStageItem("recognition", "active");
+        setLinkDone("prepare-recognition", true);
+      } else if (stage === "processing") {
+        setStageItem("prepare", "done");
+        setStageItem("recognition", "done");
+        setStageItem("processing", "active");
+        setLinkDone("prepare-recognition", true);
+        setLinkDone("recognition-processing", true);
+      } else {
+        setStageItem("prepare", "active");
+      }
+      return;
+    }
+
+    if (status === "completed") {
+      setStageItem("prepare", "done");
+      setStageItem("recognition", "done");
+      setStageItem("processing", "done");
+      setLinkDone("prepare-recognition", true);
+      setLinkDone("recognition-processing", true);
+      return;
+    }
+
+    if (status === "error") {
+      if (stage === "recognition") {
+        setStageItem("prepare", "done");
+        setStageItem("recognition", "error");
+        setLinkDone("prepare-recognition", true);
+      } else if (stage === "processing") {
+        setStageItem("prepare", "done");
+        setStageItem("recognition", "done");
+        setStageItem("processing", "error");
+        setLinkDone("prepare-recognition", true);
+        setLinkDone("recognition-processing", true);
+      } else {
+        setStageItem("prepare", "error");
+      }
+    }
+  }
+
+  function showRuntimeError(text) {
+    runtimeErrorText.textContent = text || "未知错误";
+    runtimeErrorPanel.classList.remove("hidden");
+  }
+
+  function hideRuntimeError() {
+    runtimeErrorText.textContent = "";
+    runtimeErrorPanel.classList.add("hidden");
+  }
+
+  function resetResultPanel() {
+    resultPanel.classList.add("hidden");
+    resultMeta.innerHTML = "";
+    layerCsvList.innerHTML = "";
+    moduleResultBody.innerHTML = "";
+    summaryPre.textContent = "";
+  }
+
+  function updateProgress(data) {
+    const progress = Math.max(0, Math.min(100, Number(data.progress || 0)));
+    progressFill.style.width = `${progress.toFixed(1)}%`;
+    progressText.textContent = data.message || "运行中";
+    elapsedText.textContent = `已耗时: ${formatSec(data.elapsed_sec)}`;
+    etaText.textContent = `预计剩余: ${formatSec(data.eta_sec)}`;
+    applyStageState(data.status, data.stage);
+  }
+
+  function renderSummary(summary) {
+    if (!summary) return;
+    resultPanel.classList.remove("hidden");
+
+    const timing = summary.timing || {};
+    const recognition = summary.recognition || {};
+
+    const infMsg = recognition.inference_message
+      ? `<div class="hint success">${escapeHtml(recognition.inference_message)}</div>`
+      : "";
+
+    resultMeta.innerHTML = `
+      <div>
+        <p><strong>summary_json:</strong> <code>${escapeHtml(summary.summary_json || "")}</code></p>
+        <p><strong>层级CSV目录:</strong> <code>${escapeHtml(summary.layer_csv_dir || "")}</code></p>
+        ${infMsg}
+        <p><strong>raw_json:</strong> <code>${escapeHtml(recognition.raw_json_path || "")}</code></p>
+        <p><strong>tonly_json:</strong> <code>${escapeHtml(recognition.tonly_json_path || "")}</code></p>
+      </div>
+      <div>
+        <p><strong>总耗时:</strong> ${formatSec(timing.total_elapsed_sec)}</p>
+        <p><strong>识别耗时:</strong> ${formatSec(timing.recognition_elapsed_sec)}</p>
+        <p><strong>处理耗时:</strong> ${formatSec(timing.processing_elapsed_sec)}</p>
+        <p><strong>层级CSV导出耗时:</strong> ${formatSec(timing.csv_export_elapsed_sec)}</p>
+      </div>
+    `;
+
+    const csvFiles = summary.layer_csv_files || {};
+    const csvStatus = summary.layer_csv_status || {};
+    layerCsvList.innerHTML = "";
+    ["tilt", "shrug", "displacement", "rotation"].forEach((k) => {
+      const p = csvFiles[k] || "";
+      const s = csvStatus[k] || "";
+      const item = document.createElement("div");
+      item.className = "list-item";
+      item.innerHTML = `
+        <span class="tag">${escapeHtml(k)}</span>
+        <code>${escapeHtml(p)}</code>
+        <span class="status ${escapeHtml(s)}">${escapeHtml(s)}</span>
+      `;
+      layerCsvList.appendChild(item);
+    });
+
+    const rows = summary.results || [];
+    moduleResultBody.innerHTML = "";
+    rows.forEach((r) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(r.module || "")}</td>
+        <td>${escapeHtml(r.status || "")}</td>
+        <td>${escapeHtml(r.event_count ?? "")}</td>
+        <td><code>${escapeHtml(r.csv || "")}</code></td>
+        <td><code>${escapeHtml(r.output_dir || "")}</code></td>
+        <td>${formatSec(r.elapsed_sec)}</td>
+      `;
+      moduleResultBody.appendChild(tr);
+    });
+
+    summaryPre.textContent = JSON.stringify(summary, null, 2);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  async function pollJob() {
+    if (!activeJobId) return;
+    try {
+      const resp = await fetch(`${endpoints.getJobBase}${encodeURIComponent(activeJobId)}`);
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        throw new Error(data.error || `请求失败(${resp.status})`);
+      }
+
+      updateProgress(data);
+
+      if (data.status === "completed") {
+        stopPolling();
+        btnStart.disabled = false;
+        renderSummary(data.summary || {});
+      } else if (data.status === "error") {
+        stopPolling();
+        btnStart.disabled = false;
+        showRuntimeError(data.error || "任务失败");
+      }
+    } catch (err) {
+      stopPolling();
+      btnStart.disabled = false;
+      showRuntimeError(String(err));
+    }
+  }
+
+  async function createJob(formData) {
+    const resp = await fetch(endpoints.createJob, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) {
+      throw new Error(data.error || `创建任务失败(${resp.status})`);
+    }
+    return data;
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    hideRuntimeError();
+    resetResultPanel();
+    stopPolling();
+    activeJobId = "";
+
+    btnStart.disabled = true;
+    progressFill.style.width = "0%";
+    progressText.textContent = "准备提交任务...";
+    elapsedText.textContent = "已耗时: --";
+    etaText.textContent = "预计剩余: --";
+    applyStageState("queued", "prepare");
+
+    try {
+      const job = await createJob(new FormData(form));
+      activeJobId = job.job_id;
+      progressText.textContent = `任务已创建（${activeJobId}），正在进入识别阶段...`;
+      pollTimer = setInterval(pollJob, 1000);
+      pollJob();
+    } catch (err) {
+      btnStart.disabled = false;
+      showRuntimeError(String(err));
+      applyStageState("error", "prepare");
+    }
+  });
+
+  btnPreviewCover.addEventListener("click", async () => {
+    hideRuntimeError();
+    const p = inputPath.value.trim();
+    if (!p) {
+      previewHint.textContent = "请先输入视频路径。";
+      return;
+    }
+
+    const u = `${endpoints.previewCover}?path=${encodeURIComponent(p)}&_ts=${Date.now()}`;
+    coverImg.src = u;
+    coverImg.classList.remove("hidden");
+    emptyPreview.classList.add("hidden");
+    previewHint.textContent = "正在加载首帧...";
+
+    coverImg.onload = () => {
+      previewHint.textContent = "首帧预览已加载。";
+    };
+    coverImg.onerror = () => {
+      coverImg.classList.add("hidden");
+      emptyPreview.classList.remove("hidden");
+      previewHint.textContent = "首帧预览失败，请检查路径或编码器。";
+    };
+  });
+
+  btnLoadFullVideo.addEventListener("click", () => {
+    const p = inputPath.value.trim();
+    if (!p) {
+      previewHint.textContent = "请先输入视频路径。";
+      return;
+    }
+    fullVideo.src = `${endpoints.previewVideo}?path=${encodeURIComponent(p)}`;
+    fullVideo.classList.remove("hidden");
+    emptyPreview.classList.add("hidden");
+    previewHint.textContent = "已加载完整视频预览。";
+  });
+})();
+</script>
+</body>
+</html>

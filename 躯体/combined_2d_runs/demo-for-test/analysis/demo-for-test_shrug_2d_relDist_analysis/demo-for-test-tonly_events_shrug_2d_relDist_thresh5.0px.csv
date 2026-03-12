@@ -1,0 +1,3 @@
+﻿event_type,start_frame,end_frame,start_time_sec,end_time_sec,duration_sec,duration_frames,peak_shrug_distance,avg_shrug_distance,min_relative_y,units_distance,units_relative_y,start_time_str,end_time_str
+耸肩,95,114,3.167,3.833,0.667,20,14.84,9.69,-126.57,像素,像素,00:03.167,00:03.800
+耸肩,224,235,7.467,7.867,0.400,12,12.31,8.88,-142.19,像素,像素,00:07.467,00:07.833
