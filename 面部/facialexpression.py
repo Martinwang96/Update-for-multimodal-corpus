@@ -9,27 +9,25 @@ Copyright (c) 2025 by Martin Wang in Language of Sciences, Shanghai Internationa
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
 import os
-from datetime import datetime
+from face_common import (load_openface_csv, calculate_frame_rate, ask_float,
+                         setup_matplotlib, get_timestamp_str, save_csv_report)
 
-rcParams['font.sans-serif'] = ['SimHei']
-rcParams['axes.unicode_minus'] = False
+setup_matplotlib()
 
-def detect_expression(file_path=None, visualize=True):
-    """检测指定的表情组合，结合存在性（c）和强度（r）"""
-    
+def detect_expression(file_path=None, visualize=True, params=None):
+    """检测指定的表情组合，结合存在性（c）和强度（r）
+    params: 非交互式参数 dict，提供时跳过 input() 调用。
+    """
+    p = params or {}
     if file_path is None:
         file_path = input("请输入OpenFace CSV文件路径：")
     
-    try:
-        data = pd.read_csv(file_path)
-        data.columns = data.columns.str.strip()
-    except Exception as e:
-        print(f"文件读取失败：{e}")
+    data = load_openface_csv(file_path)
+    if data is None:
         return {}, None
     
-    # 必要表情列检查（新增AU9, AU15, AU20相关列）
+    # 必要表情列检查
     required_columns = [
         'AU01_c', 'AU02_c', 'AU04_c', 'AU05_c', 'AU06_c', 'AU07_c', 'AU09_c', 
         'AU10_c', 'AU12_c', 'AU14_c', 'AU15_c', 'AU17_c', 'AU20_c', 'AU23_c', 
@@ -42,44 +40,35 @@ def detect_expression(file_path=None, visualize=True):
         print(f"数据缺少必要列：{', '.join(missing)}")
         return {}, data
     
-    # 计算帧率
-    if 'timestamp' in data.columns and len(data) > 1:
-        avg_time = np.mean(np.diff(data['timestamp']))
-        frame_rate = 1 / avg_time if avg_time > 0 else 30
+    frame_rate = calculate_frame_rate(data)
+    
+    # 用户参数设置：只要传入了 params（即便是空 dict），就视为非交互式调用，
+    # 缺失的键直接用默认值，绝不调用 ask_float/input() 阻塞等待终端输入。
+    non_interactive = params is not None
+    if non_interactive:
+        happy_au6_r = p.get('happy_au6_r', 1.5)
+        happy_au7_r = p.get('happy_au7_r', 1.5)
+        happy_au12_r = p.get('happy_au12_r', 1.5)
+        happy_au25_r = p.get('happy_au25_r', 1.5)
+        happy_au26_r = p.get('happy_au26_r', 1.5)
+        surprise_au26_r = p.get('surprise_au26_r', 1.5)
+        confused_au4_r = p.get('confused_au4_r', 1.5)
+        focused_au5_r = p.get('focused_au5_r', 1.5)
+        focused_au14_r = p.get('focused_au14_r', 1.5)
+        min_duration = p.get('min_duration', 1.0)
     else:
-        frame_rate = 30
-    print(f"检测到帧率：{frame_rate:.1f} fps")
-    
-    # 用户参数设置（新增厌烦相关参数）
-    print("\n请设置检测参数（回车使用默认值）：")
-    
-    # 微笑参数（更新增强版的微笑参数）
-    happy_au6_r = float(input("微笑（AU06）强度阈值，默认1.5：") or 1.5)
-    happy_au7_r = float(input("微笑（AU07）强度阈值，默认1.5：") or 1.5)
-    happy_au12_r = float(input("微笑（AU12）强度阈值，默认1.5：") or 1.5)
-    happy_au25_r = float(input("微笑（AU25）强度阈值，默认1.5：") or 1.5)
-    happy_au26_r = float(input("微笑（AU26）强度阈值，默认1.5：") or 1.5)
-    
-    # 张嘴参数
-    surprise_au26_r = float(input("张嘴（AU26）强度阈值，默认1.5：") or 1.5)
-    
-    # 皱眉参数
-    confused_au4_r = float(input("皱眉（AU04）强度阈值，默认1.5：") or 1.5)
+        print("\n请设置检测参数（回车使用默认值）：")
+        happy_au6_r = ask_float("微笑（AU06）强度阈值", 1.5)
+        happy_au7_r = ask_float("微笑（AU07）强度阈值", 1.5)
+        happy_au12_r = ask_float("微笑（AU12）强度阈值", 1.5)
+        happy_au25_r = ask_float("微笑（AU25）强度阈值", 1.5)
+        happy_au26_r = ask_float("微笑（AU26）强度阈值", 1.5)
+        surprise_au26_r = ask_float("张嘴（AU26）强度阈值", 1.5)
+        confused_au4_r = ask_float("皱眉（AU04）强度阈值", 1.5)
+        focused_au5_r = ask_float("专注（AU05）强度阈值", 1.5)
+        focused_au14_r = ask_float("专注（AU14）强度阈值", 1.5)
+        min_duration = float(input("表情最小持续时间（秒，默认1.0）：") or 1.0)
 
-    
-    # 专注参数
-    focused_au5_r = float(input("专注（AU05）强度阈值，默认1.5：") or 1.5)
-    focused_au14_r = float(input("专注（AU14）强度阈值，默认1.5：") or 1.5)
-    
-    # 厌烦参数（新增）
-    # bored_au9_r = float(input("厌烦（AU09 鼻子皱起）强度阈值，默认1.5：") or 1.5)
-    # bored_au15_r = float(input("厌烦（AU15 嘴角下拉）强度阈值，默认1.5：") or 1.5)
-    # bored_au10_r = float(input("厌烦（AU10 上唇提升）强度阈值，默认1.5：") or 1.5)
-    # bored_au17_r = float(input("厌烦（AU17 下巴提升）强度阈值，默认1.5：") or 1.5)
-    # bored_au20_r = float(input("厌烦（AU20 嘴角水平）强度阈值，默认1.5：") or 1.5)
-    
-    # 持续时间参数
-    min_duration = float(input("表情最小持续时间（秒，默认1.0）：") or 1.0)
     min_frames = int(min_duration * frame_rate)
     
     # 初始化帧和秒信息
@@ -156,51 +145,13 @@ def detect_expression(file_path=None, visualize=True):
     # data['is_bored'] = data.apply(is_bored, axis=1)  # 新增厌烦标记
     
     # 检测持续区间函数
-    def detect_expression_intervals(expr_col, min_f):
-        intervals = []
-        in_interval = False
-        start = None
-        
-        for idx in data.index:
-            if data.loc[idx, expr_col]:
-                if not in_interval:
-                    in_interval = True
-                    start = idx
-            else:
-                if in_interval:
-                    duration = idx - start
-                    if duration >= min_f:
-                        end = idx-1
-                        intervals.append({
-                            'start_frame': data.loc[start, 'frame'],
-                            'end_frame': data.loc[end, 'frame'],
-                            'start_time': data.loc[start, 'second'],
-                            'end_time': data.loc[end, 'second'],
-                            'duration': duration / frame_rate
-                        })
-                    in_interval = False
-                    start = None
-        
-        if in_interval:
-            end = data.index[-1]
-            duration = end - start
-            if duration >= min_f:
-                intervals.append({
-                    'start_frame': data.loc[start, 'frame'],
-                    'end_frame': data.loc[end, 'frame'],
-                    'start_time': data.loc[start, 'second'],
-                    'end_time': data.loc[end, 'second'],
-                    'duration': duration / frame_rate
-                })
-        
-        return intervals
-    
+    from face_common import detect_flag_intervals
     # 检测各表情组合
     results = {}
-    results['微笑'] = detect_expression_intervals('is_happy', min_frames)
-    results['张嘴'] = detect_expression_intervals('is_surprise', min_frames)
-    results['皱眉'] = detect_expression_intervals('is_confused', min_frames)
-    results['专注'] = detect_expression_intervals('is_focused', min_frames)
+    results['微笑'] = detect_flag_intervals(data, 'is_happy', min_frames, frame_rate)
+    results['张嘴'] = detect_flag_intervals(data, 'is_surprise', min_frames, frame_rate)
+    results['皱眉'] = detect_flag_intervals(data, 'is_confused', min_frames, frame_rate)
+    results['专注'] = detect_flag_intervals(data, 'is_focused', min_frames, frame_rate)
     # results['厌烦'] = detect_expression_intervals('is_bored', min_frames)  # 新增厌烦检测结果
     
     # 可视化
@@ -246,7 +197,7 @@ def detect_expression(file_path=None, visualize=True):
         plt.tight_layout()
         
         # 保存结果
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = get_timestamp_str()
         output_dir = "表情分析结果"
         os.makedirs(output_dir, exist_ok=True)
         
@@ -260,12 +211,10 @@ def detect_expression(file_path=None, visualize=True):
                     '表情类型': expr_type,
                     '开始时间': interval['start_time'],
                     '结束时间': interval['end_time'],
-                    '持续时间(s)': round(interval['duration'], 2)
+                    '持续时间(s)': interval['duration']
                 })
         
-        df = pd.DataFrame(report)
-        df.to_csv(f"{output_dir}/表情报告_{timestamp}.csv", index=False)
-        print(f"结果已保存到：{output_dir}")
+        save_csv_report(pd.DataFrame(report), output_dir, "表情报告", timestamp)
         plt.show()
     
     return results

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>非言语行为分析平台</title>
+    <style>
+        :root {
+            --bg: oklch(0.978 0.004 85);
+            --surface: oklch(0.995 0.002 85);
+            --border: oklch(0.91 0.005 80);
+            --border-strong: oklch(0.85 0.008 75);
+            --text: oklch(0.24 0.008 60);
+            --text-secondary: oklch(0.45 0.01 65);
+            --text-muted: oklch(0.63 0.01 70);
+            --accent: oklch(0.55 0.11 60);
+            --accent-hover: oklch(0.48 0.10 58);
+            --accent-soft: oklch(0.95 0.02 75);
+            --accent-border: oklch(0.88 0.02 70);
+            --success: oklch(0.38 0.09 155);
+            --success-bg: oklch(0.94 0.03 155);
+            --warning: oklch(0.42 0.09 75);
+            --warning-bg: oklch(0.94 0.03 85);
+            --error: oklch(0.42 0.12 25);
+            --error-bg: oklch(0.95 0.03 25);
+            --info: oklch(0.40 0.07 240);
+            --info-bg: oklch(0.94 0.02 240);
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            --mono: "SF Mono", ui-monospace, "Menlo", monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text);
+               font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+        /* ---------- 顶部导航 ---------- */
+        .topnav { position: sticky; top: 0; z-index: 50; background: var(--surface);
+                  border-bottom: 1px solid var(--border); }
+        .topnav-inner { max-width: 1040px; margin: 0 auto; padding: 0 24px; height: 56px;
+                        display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand-mark { display: flex; align-items: flex-end; gap: 2px; height: 18px; }
+        .brand-mark span { display: block; width: 4px; border-radius: 1px; }
+        .brand-mark span:nth-child(1) { height: 8px; background: var(--text-muted); }
+        .brand-mark span:nth-child(2) { height: 16px; background: var(--accent); }
+        .brand-mark span:nth-child(3) { height: 11px; background: var(--text); }
+        .brand-name { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; }
+        .brand-sub { font-size: 11px; color: var(--text-muted); margin-left: 2px; }
+        .service-status { display: flex; align-items: center; gap: 16px; font-size: 12px;
+                          color: var(--text-secondary); }
+        .status-item { display: flex; align-items: center; gap: 6px; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+        .status-dot.on { background: var(--success); }
+        .status-dot.off { background: var(--error); }
+
+        /* ---------- 页面主体 ---------- */
+        .container { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+        .page-head { margin-bottom: 24px; }
+        .page-head h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+        .page-head p { font-size: 13px; color: var(--text-secondary); max-width: 65ch; }
+
+        /* ---------- 全局上传区 ---------- */
+        .upload-global { background: var(--surface); border: 1px solid var(--border);
+                         border-radius: var(--radius-md); padding: 24px 28px; margin-bottom: 24px;
+                         box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .upload-area { background: oklch(0.975 0.003 80); border: 1.5px dashed var(--border-strong);
+                       border-radius: 8px; padding: 28px 24px; text-align: center;
+                       cursor: pointer; transition: all 150ms ease-out; }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--accent); background: var(--accent-soft); }
+        .upload-icon { margin: 0 auto 8px; width: 26px; height: 26px; color: var(--text-muted); }
+        .upload-area:hover .upload-icon { color: var(--accent); }
+        .upload-area .upload-title { font-size: 13px; color: var(--text-secondary); }
+        .upload-area .upload-formats { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+        /* 当前文件条 */
+        .current-file { display: none; align-items: center; justify-content: space-between;
+                        margin-top: 14px; padding: 10px 14px; background: var(--accent-soft);
+                        border: 1px solid var(--accent-border); border-radius: 8px; }
+        .current-file.show { display: flex; }
+        .current-file-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .file-kind-badge { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--accent);
+                           background: var(--surface); border: 1px solid var(--accent-border);
+                           padding: 2px 8px; border-radius: 10px; }
+        .file-name { font-size: 13px; font-weight: 500; overflow: hidden;
+                     text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .file-modules-hint { font-size: 12px; color: var(--text-secondary); margin-left: 8px; }
+        .btn-link { background: none; border: none; color: var(--accent); font-size: 12px;
+                    font-weight: 500; cursor: pointer; padding: 4px 8px; font-family: var(--font); }
+        .btn-link:hover { text-decoration: underline; }
+
+        /* ---------- 模块切换 tabs ---------- */
+        .tabs { display: inline-flex; gap: 2px; background: oklch(0.93 0.005 80);
+                border-radius: 8px; padding: 3px; margin-bottom: 24px; }
+        .tab { border: none; background: transparent; padding: 7px 18px; border-radius: 6px;
+               font-family: var(--font); font-size: 13px; font-weight: 500;
+               color: var(--text-secondary); cursor: pointer; transition: all 150ms ease-out; }
+        .tab:hover:not(.disabled) { color: var(--text); }
+        .tab.active { background: var(--surface); color: var(--text);
+                      box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+        .tab.disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* ---------- 面板 ---------- */
+        .panel { background: var(--surface); border: 1px solid var(--border);
+                 border-radius: var(--radius-md); padding: 28px; margin-bottom: 24px;
+                 box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .panel.hidden { display: none; }
+        .panel-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+        .panel-empty-hint { font-size: 13px; color: var(--text-muted); padding: 20px 0; text-align: center; }
+
+        /* ---------- 步骤指示器 ---------- */
+        .steps { display: flex; align-items: center; gap: 8px; margin-bottom: 20px;
+                 padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .step-node { display: flex; align-items: center; gap: 6px; font-size: 12px;
+                     color: var(--text-muted); }
+        .step-node i { display: flex; align-items: center; justify-content: center;
+                       width: 20px; height: 20px; border-radius: 50%; font-style: normal;
+                       font-size: 11px; border: 1.5px solid var(--border-strong);
+                       color: var(--text-muted); }
+        .step-node.active { color: var(--accent); font-weight: 500; }
+        .step-node.active i { border-color: var(--accent); color: var(--accent); }
+        .step-node.done { color: var(--text-secondary); }
+        .step-node.done i { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .step-line { flex: 0 0 24px; height: 1px; background: var(--border); }
+
+        /* ---------- 表单 ---------- */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+        .form-group select, .form-group input[type="number"] {
+            width: 100%; max-width: 320px; padding: 8px 12px; border: 1px solid var(--border);
+            border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font);
+            background: var(--surface); color: var(--text); transition: all 150ms ease-out; }
+        .form-group select:focus, .form-group input:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px oklch(0.55 0.11 60 / 0.15); }
+        .hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .hidden { display: none; }
+
+        /* ---------- 按钮 ---------- */
+        .btn { background: var(--accent); color: #fff; border: none; padding: 9px 20px;
+               border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px;
+               font-weight: 500; cursor: pointer; transition: background 150ms ease-out; }
+        .btn:hover { background: var(--accent-hover); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* ---------- 预览结果 ---------- */
+        .preview-box { background: var(--accent-soft); border: 1px solid var(--accent-border);
+                       border-radius: 8px; padding: 20px; margin-top: 20px; }
+        .preview-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+        .preview-box h3:not(:first-child) { margin-top: 18px; }
+        .preview-row { display: flex; justify-content: space-between; padding: 5px 0;
+                       font-size: 13px; border-bottom: 1px solid oklch(0.90 0.015 72); }
+        .preview-row:last-of-type { border-bottom: none; }
+        .preview-row .label { color: var(--text-secondary); }
+        .preview-row .value { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .body-param-section + .body-param-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .body-param-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+        .body-param-grid .form-group { margin-bottom: 12px; }
+        .body-param-grid .form-group input[type="number"] { max-width: none; }
+        .preview-box .btn { margin-top: 16px; }
+        .preview-note { font-size: 12px; color: var(--text-secondary); margin: 8px 0; }
+        .preview-error { color: var(--error); font-size: 13px; }
+
+        /* ---------- 状态面板 ---------- */
+        #status-panel { display: none; }
+        .status-box { padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none; }
+        .status-box.show { display: block; }
+        .status-pending { background: var(--warning-bg); color: var(--warning); }
+        .status-running { background: var(--info-bg); color: var(--info); }
+        .status-done { background: var(--success-bg); color: var(--success); }
+        .status-error { background: var(--error-bg); color: var(--error); }
+        .poll-info { font-family: var(--mono); font-size: 12px; background: oklch(0.96 0.003 80);
+                     color: var(--text-secondary); padding: 12px; border-radius: 8px;
+                     white-space: pre-wrap; max-height: 240px; overflow-y: auto; margin-top: 12px; }
+        .results { margin-top: 16px; }
+        .results h3 { font-size: 13px; font-weight: 600; margin: 14px 0 8px; }
+        .result-item { background: oklch(0.97 0.003 80); padding: 10px 14px; border-radius: 6px;
+                       margin-bottom: 6px; font-size: 13px; display: flex;
+                       justify-content: space-between; align-items: center; }
+        .result-item a { color: var(--accent); text-decoration: none; font-weight: 500; }
+        .result-item a:hover { text-decoration: underline; }
+
+        @media (max-width: 720px) {
+            .container { padding: 20px 16px 48px; }
+            .panel { padding: 20px; }
+            .tabs { display: flex; width: 100%; }
+            .tab { flex: 1; padding: 7px 8px; font-size: 12px; }
+            .brand-sub { display: none; }
+            .body-param-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="topnav">
+        <div class="topnav-inner">
+            <div class="brand">
+                <div class="brand-mark"><span></span><span></span><span></span></div>
+                <span class="brand-name">非言语行为分析平台</span>
+                <span class="brand-sub">Nonverbal Behavior Analysis</span>
+            </div>
+            <div class="service-status">
+                <span class="status-item"><span class="status-dot" id="dot-openface"></span><span id="txt-openface">OpenFace 检测中</span></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-head">
+            <h1>行为事件分析</h1>
+            <p>上传一次文件，多模块共享分析：视频可用于面部、头部、躯体；CSV 用于面部与头部；关键点 JSON 用于躯体。先预览数据统计与推荐参数，确认后生成行为事件区间报告。</p>
+        </div>
+
+        <!-- 全局上传区 -->
+        <div class="upload-global">
+            <div class="upload-area" id="drop-global" onclick="document.getElementById('file-global').click()">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="upload-title">点击选择或拖拽文件到此处</div>
+                <div class="upload-formats">支持视频 .mp4 .mov .avi 等 · OpenFace .csv · 关键点 .json</div>
+            </div>
+            <input type="file" id="file-global" accept=".csv,.json,.mp4,.avi,.mov,.mkv,.webm,.flv,.wmv" class="hidden">
+            <div class="current-file" id="current-file">
+                <div class="current-file-info">
+                    <span class="file-kind-badge" id="current-file-kind"></span>
+                    <span class="file-name" id="current-file-name"></span>
+                    <span class="file-modules-hint" id="current-file-hint"></span>
+                </div>
+                <button class="btn-link" onclick="resetUpload()">更换文件</button>
+            </div>
+        </div>
+
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-module="face" onclick="selectModule('face')">面部表情</button>
+            <button class="tab" data-module="head" onclick="selectModule('head')">头部运动</button>
+            <button class="tab" data-module="body" onclick="selectModule('body')">躯体动作</button>
+        </div>
+
+        <!-- 面部面板 -->
+        <section class="panel" id="panel-face">
+            <div class="steps" id="steps-face">
+                <span class="step-node active" data-step="1"><i>1</i>上传文件</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="2"><i>2</i>预览与参数</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="3"><i>3</i>分析结果</span>
+            </div>
+
+            <div class="form-group">
+                <label>分析子模块</label>
+                <select id="face-subtype">
+                    <option value="expression">表情检测（微笑 / 张嘴 / 皱眉 / 专注）</option>
+                    <option value="eye">眼部状态（眯眼 / 闭眼 / 眨眼）</option>
+                </select>
+                <div class="hint" id="face-input-hint">接受视频或 OpenFace CSV</div>
+            </div>
+            <button class="btn" onclick="startPreview('face')" id="preview-btn-face">预览数据与推荐参数</button>
+            <div id="preview-result-face"></div>
+        </section>
+
+        <!-- 头部面板 -->
+        <section class="panel hidden" id="panel-head">
+            <div class="steps" id="steps-head">
+                <span class="step-node active" data-step="1"><i>1</i>上传文件</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="2"><i>2</i>预览与参数</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="3"><i>3</i>分析结果</span>
+            </div>
+
+            <div class="form-group">
+                <label>分析轴</label>
+                <select id="head-axis">
+                    <option value="pitch">抬头 / 低头 (pose_Rx)</option>
+                    <option value="roll">左倾 / 右倾 (pose_Rz)</option>
+                    <option value="yaw">转头 / 摇头 (pose_Ry)</option>
+                </select>
+                <div class="hint">接受视频或 OpenFace CSV</div>
+            </div>
+            <button class="btn" onclick="startPreview('head')" id="preview-btn-head">预览数据与推荐阈值</button>
+            <div id="preview-result-head"></div>
+        </section>
+
+        <!-- 躯体面板 -->
+        <section class="panel hidden" id="panel-body">
+            <div class="steps" id="steps-body">
+                <span class="step-node active" data-step="1"><i>1</i>上传文件</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="2"><i>2</i>预览与参数</span>
+                <span class="step-line"></span>
+                <span class="step-node" data-step="3"><i>3</i>分析结果</span>
+            </div>
+
+            <div class="form-group" id="body-video-opts" style="display:none">
+                <label>识别设备</label>
+                <select id="body-device">
+                    <option value="auto">自动</option>
+                    <option value="cuda">GPU (CUDA)</option>
+                    <option value="cpu">CPU</option>
+                </select>
+                <div class="hint">视频输入需 MMPose 识别；JSON 输入跳过识别阶段</div>
+            </div>
+            <button class="btn" onclick="startPreview('body')" id="preview-btn-body">预览数据</button>
+            <div id="preview-result-body"></div>
+        </section>
+
+        <!-- 状态面板 -->
+        <section class="panel" id="status-panel">
+            <h2 class="panel-title">分析状态</h2>
+            <div class="status-box" id="status-box"></div>
+            <div class="poll-info" id="poll-info"></div>
+            <div class="results" id="results-area"></div>
+        </section>
+    </div>
+
+    <script>
+        let currentModule = 'face';
+        let currentFileId = null;
+        let currentFileKind = null;
+        let allowedModules = ['face', 'head', 'body'];
+        const previewIds = { face: null, head: null, body: null };
+        let activePollToken = 0;
+        const KIND_LABEL = { video: '视频', csv: 'CSV', json: 'JSON' };
+        const MODULE_LABEL = { face: '面部表情', head: '头部运动', body: '躯体动作' };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        async function fetchJson(url, options) {
+            const resp = await fetch(url, options);
+            const contentType = resp.headers.get('content-type') || '';
+            const rawText = await resp.text();
+            let data = null;
+
+            if (contentType.includes('application/json')) {
+                try {
+                    data = rawText ? JSON.parse(rawText) : {};
+                } catch (e) {
+                    throw new Error('服务端返回了损坏的 JSON');
+                }
+            } else {
+                const text = rawText.trim();
+                if (!resp.ok) {
+                    throw new Error(text.startsWith('<!doctype') || text.startsWith('<html')
+                        ? `服务端返回了 ${resp.status} 错误页`
+                        : (text || `请求失败（${resp.status}）`));
+                }
+                throw new Error('服务端返回了非 JSON 响应');
+            }
+
+            if (!resp.ok) {
+                throw new Error(data.error || data.message || `请求失败（${resp.status}）`);
+            }
+            return data;
+        }
+
+        function resetResultsArea() {
+            document.getElementById('results-area').innerHTML = '';
+            document.getElementById('poll-info').textContent = '';
+        }
+
+        function selectModule(m) {
+            if (!allowedModules.includes(m)) {
+                alert(`当前文件类型（${KIND_LABEL[currentFileKind] || ''}）不支持「${MODULE_LABEL[m]}」模块`);
+                return;
+            }
+            currentModule = m;
+            document.querySelectorAll('.tab').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[data-module="${m}"]`).classList.add('active');
+            ['face','head','body'].forEach(p => {
+                document.getElementById('panel-'+p).classList.toggle('hidden', p !== m);
+            });
+        }
+
+        function markStep(module, n) {
+            const steps = document.getElementById('steps-'+module);
+            if (!steps) return;
+            steps.querySelectorAll('.step-node').forEach(node => {
+                const s = parseInt(node.dataset.step, 10);
+                node.classList.toggle('done', s < n);
+                node.classList.toggle('active', s === n);
+            });
+        }
+
+        function markAllSteps(n) {
+            ['face','head','body'].forEach(m => markStep(m, n));
+        }
+
+        // 服务状态检测
+        (async function checkOpenFace() {
+            const dot = document.getElementById('dot-openface');
+            const txt = document.getElementById('txt-openface');
+            try {
+                const resp = await fetch('/api/openface/status');
+                const data = await resp.json();
+                dot.className = 'status-dot ' + (data.available ? 'on' : 'off');
+                txt.textContent = data.available ? 'OpenFace 已连接' : 'OpenFace 未配置';
+            } catch (e) {
+                dot.className = 'status-dot off';
+                txt.textContent = 'OpenFace 状态未知';
+            }
+        })();
+
+        // ============ 全局上传 ============
+        const gInput = document.getElementById('file-global');
+        const gDrop = document.getElementById('drop-global');
+
+        gInput.addEventListener('change', e => {
+            if (e.target.files.length) handleGlobalFile(e.target.files[0]);
+        });
+        gDrop.addEventListener('dragover', e => { e.preventDefault(); gDrop.classList.add('dragover'); });
+        gDrop.addEventListener('dragleave', () => gDrop.classList.remove('dragover'));
+        gDrop.addEventListener('drop', e => {
+            e.preventDefault();
+            gDrop.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleGlobalFile(e.dataTransfer.files[0]);
+        });
+
+        async function handleGlobalFile(file) {
+            const fd = new FormData();
+            fd.append('file', file);
+
+            document.getElementById('status-panel').style.display = 'block';
+            updateStatus('running', '正在上传文件…');
+
+            try {
+                const data = await fetchJson('/api/upload', { method: 'POST', body: fd });
+
+                currentFileId = data.file_id;
+                currentFileKind = data.kind;
+                allowedModules = data.modules;
+                previewIds.face = null;
+                previewIds.head = null;
+                previewIds.body = null;
+                activePollToken += 1;
+
+                // 清空各面板预览
+                ['face','head','body'].forEach(m => {
+                    document.getElementById('preview-result-'+m).innerHTML = '';
+                });
+                resetResultsArea();
+
+                // 当前文件条
+                document.getElementById('current-file-kind').textContent = KIND_LABEL[data.kind];
+                document.getElementById('current-file-name').textContent = data.filename;
+                document.getElementById('current-file-hint').textContent =
+                    '可用模块：' + data.modules.map(m => MODULE_LABEL[m]).join(' / ');
+                document.getElementById('current-file').classList.add('show');
+
+                // 躯体面板 device 选项仅视频需要
+                document.getElementById('body-video-opts').style.display =
+                    data.kind === 'video' ? 'block' : 'none';
+
+                // tab 可用性
+                document.querySelectorAll('.tab').forEach(t => {
+                    t.classList.toggle('disabled', !allowedModules.includes(t.dataset.module));
+                });
+
+                // 上传完成，步骤进入 2
+                markAllSteps(2);
+
+                // 若当前 tab 不支持，切到第一个可用
+                if (!allowedModules.includes(currentModule)) selectModule(allowedModules[0]);
+
+                updateStatus('done', `已上传「${data.filename}」，选择模块后预览参数`);
+            } catch (e) {
+                updateStatus('error', '上传失败: ' + e.message);
+            }
+        }
+
+        function resetUpload() {
+            currentFileId = null;
+            currentFileKind = null;
+            allowedModules = ['face', 'head', 'body'];
+            previewIds.face = null;
+            previewIds.head = null;
+            previewIds.body = null;
+            activePollToken += 1;
+            gInput.value = '';
+            document.getElementById('current-file').classList.remove('show');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('disabled'));
+            ['face','head','body'].forEach(m => {
+                document.getElementById('preview-result-'+m).innerHTML = '';
+                markStep(m, 1);
+            });
+            resetResultsArea();
+        }
+
+        // ============ 第 1 步：预览 ============
+        async function startPreview(module) {
+            if (!currentFileId) { alert('请先在上方上传文件'); return; }
+
+            const fd = new FormData();
+            fd.append('file_id', currentFileId);
+            fd.append('module', module);
+            if (module === 'face') {
+                fd.append('subtype', document.getElementById('face-subtype').value);
+            } else if (module === 'head') {
+                fd.append('axis', document.getElementById('head-axis').value);
+            }
+
+            const btn = document.getElementById('preview-btn-'+module);
+            const oldText = btn.textContent;
+            btn.disabled = true; btn.textContent = '预览中…';
+
+            document.getElementById('status-panel').style.display = 'block';
+            const slowConvert = currentFileKind === 'video' && (module === 'face' || module === 'head');
+            updateStatus('running', slowConvert
+                ? '视频转换中：首次经 OpenFace 提取特征需 1–2 分钟（之后切换模块将直接复用）…'
+                : '正在读取数据并计算推荐参数…');
+
+            try {
+                const data = await fetchJson('/api/preview', { method: 'POST', body: fd });
+                previewIds[module] = data.preview_id;
+                renderPreview(module, data.preview, data.preview_id);
+                markStep(module, 2);
+                updateStatus('done', '预览完成，请在下方确认参数后开始分析');
+            } catch (e) {
+                updateStatus('error', '预览失败: ' + e.message);
+            } finally {
+                btn.disabled = false; btn.textContent = oldText;
+            }
+        }
+
+        function renderPreview(module, p, previewId) {
+            const box = document.getElementById('preview-result-'+module);
+            if (!p) { box.innerHTML = '<p class="preview-note">无预览数据</p>'; return; }
+            if (p.status === 'error') { box.innerHTML = `<div class="preview-box"><p class="preview-error">${escapeHtml(p.message)}</p></div>`; return; }
+
+            const row = (label, value) => (value === undefined || value === null) ? '' :
+                `<div class="preview-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value)}</span></div>`;
+
+            let html = '<div class="preview-box"><h3>数据概览</h3>';
+
+            html += row('总帧数', p.frame_count);
+            html += row('帧率', (p.frame_rate || '-') + ' FPS');
+            html += row('时长', (p.duration_sec || '-') + ' 秒');
+            if (p.resolution) html += row('分辨率', p.resolution);
+
+            if (p.stats && Object.keys(p.stats).length) {
+                html += '<h3>角度统计</h3>';
+                for (const [k, v] of Object.entries(p.stats)) {
+                    html += row(k, v + '°');
+                }
+            }
+            if (p.au45_c_rate !== undefined) {
+                html += row('闭眼帧占比', (p.au45_c_rate * 100).toFixed(1) + '%');
+            }
+            if (p.gaze_stats) {
+                html += row('眼动 X 标准差', p.gaze_stats.gaze_angle_x_std);
+                html += row('眼动 Y 标准差', p.gaze_stats.gaze_angle_y_std);
+            }
+            if (p.au_stats) {
+                html += '<h3>AU 强度统计（均值 / P90）</h3>';
+                const keys = Object.keys(p.au_stats).slice(0, 6);
+                for (const k of keys) {
+                    const s = p.au_stats[k];
+                    html += row(k, s.mean + ' / ' + s.p90);
+                }
+            }
+
+            const rec = p.recommended || {};
+            html += '<h3>推荐参数（可调整）</h3>';
+
+            if (module === 'head') {
+                html += `<div class="form-group"><label>检测 Delta（度）</label>
+                    <input type="number" id="${module}-final-delta" step="0.5" value="${rec.delta ?? ''}">
+                    <div class="hint">${escapeHtml(p.lower_action || '抬头')} 下限 ${rec.lower_threshold ?? '-'}° · ${escapeHtml(p.upper_action || '低头')} 上限 ${rec.upper_threshold ?? '-'}°</div></div>`;
+                html += `<div class="form-group"><label>最小持续时间（秒）</label>
+                    <input type="number" id="${module}-final-min-dur" step="0.1" value="${rec.min_duration ?? 0.5}"></div>`;
+                if (rec.max_duration !== undefined && rec.max_duration > 0) {
+                    html += `<div class="form-group"><label>最大持续时间（秒，0 为不限）</label>
+                        <input type="number" id="${module}-final-max-dur" step="0.1" value="${rec.max_duration ?? 0}"></div>`;
+                }
+            } else if (module === 'body') {
+                const bodySections = [
+                    {
+                        key: 'tilt', title: 'Tilt(2D)', fields: [
+                            ['smooth_window', '平滑窗口', 1],
+                            ['smooth_poly', '平滑阶数', 1],
+                            ['outlier_diff_threshold', '角度跳变过滤阈值', 0.1],
+                            ['threshold_override', '角度阈值覆盖', 0.1],
+                            ['min_duration_sec', '最小持续时间（秒）', 0.1],
+                            ['max_duration_sec', '最大持续时间（秒）', 0.1],
+                            ['merge_gap_sec', '事件合并间隔（秒）', 0.1],
+                        ],
+                    },
+                    {
+                        key: 'shrug', title: 'Shrug(2D)', fields: [
+                            ['smooth_window', '平滑窗口', 1],
+                            ['smooth_poly', '平滑阶数', 1],
+                            ['baseline_window_sec', '基线窗口（秒）', 0.1],
+                            ['threshold_override', '耸肩阈值覆盖', 0.1],
+                            ['min_duration_sec', '最小持续时间（秒）', 0.1],
+                            ['max_duration_sec', '最大持续时间（秒）', 0.1],
+                            ['merge_gap_sec', '事件合并间隔（秒）', 0.1],
+                        ],
+                    },
+                    {
+                        key: 'displacement', title: 'Displacement(2D X)', fields: [
+                            ['smooth_window', '位置平滑窗口', 1],
+                            ['smooth_poly', '位置平滑阶数', 1],
+                            ['baseline_window_sec', '基线窗口（秒）', 0.1],
+                            ['kinematics_window', '运动学窗口', 1],
+                            ['kinematics_poly', '运动学阶数', 1],
+                            ['threshold_pa_override', '姿态调整阈值覆盖', 0.1],
+                            ['threshold_move_override', '移动阈值覆盖', 0.1],
+                            ['min_duration_sec', '最小持续时间（秒）', 0.1],
+                            ['max_duration_sec', '最大持续时间（秒）', 0.1],
+                            ['merge_gap_sec', '事件合并间隔（秒）', 0.1],
+                        ],
+                    },
+                    {
+                        key: 'rotation', title: 'Rotation(2D)', fields: [
+                            ['left_shoulder_idx', '左肩关键点索引', 1],
+                            ['right_shoulder_idx', '右肩关键点索引', 1],
+                            ['smooth_window', '平滑窗口', 1],
+                            ['smooth_poly', '平滑阶数', 1],
+                            ['threshold_override', '转动阈值覆盖', 0.1],
+                            ['min_duration_sec', '最小持续时间（秒）', 0.1],
+                            ['max_duration_sec', '最大持续时间（秒）', 0.1],
+                            ['merge_gap_sec', '事件合并间隔（秒）', 0.1],
+                        ],
+                    },
+                ];
+                for (const section of bodySections) {
+                    const sectionRec = rec[section.key] || {};
+                    html += `<div class="body-param-section"><h3>${escapeHtml(section.title)}</h3><div class="body-param-grid">`;
+                    for (const [key, label, step] of section.fields) {
+                        const value = sectionRec[key];
+                        html += `<div class="form-group"><label>${escapeHtml(label)}</label>
+                            <input type="number" data-body-module="${section.key}" data-body-key="${key}" step="${step}" value="${value ?? ''}"></div>`;
+                    }
+                    html += '</div></div>';
+                }
+            } else if (rec.min_duration !== undefined) {
+                html += `<div class="form-group"><label>最小持续时间（秒）</label>
+                    <input type="number" id="${module}-final-min-dur" step="0.1" value="${rec.min_duration ?? 1.0}"></div>`;
+                if (rec.happy_au6_r !== undefined) {
+                    html += `<div class="form-group"><label>微笑 AU06 强度阈值</label>
+                        <input type="number" id="${module}-final-au6" step="0.1" value="${rec.happy_au6_r ?? 1.5}"></div>`;
+                    html += `<div class="form-group"><label>微笑 AU12 强度阈值</label>
+                        <input type="number" id="${module}-final-au12" step="0.1" value="${rec.happy_au12_r ?? 1.5}"></div>`;
+                    html += `<div class="form-group"><label>皱眉 AU04 强度阈值</label>
+                        <input type="number" id="${module}-final-au4" step="0.1" value="${rec.confused_au4_r ?? 1.5}"></div>`;
+                }
+            }
+
+            if (p.note) html += `<p class="preview-note">${escapeHtml(p.note)}</p>`;
+
+            html += `<button class="btn" onclick="submitFinalAnalysis('${module}', '${previewId}')">以此参数开始分析</button>`;
+            html += '</div>';
+            box.innerHTML = html;
+        }
+
+        // ============ 第 2 步：确认参数并分析 ============
+        async function submitFinalAnalysis(module, previewId) {
+            if (!previewId || previewIds[module] !== previewId) {
+                alert('当前预览已失效，请重新预览后再提交');
+                return;
+            }
+
+            const fd = new FormData();
+            fd.append('preview_id', previewId);
+
+            const finalDelta = document.getElementById(`${module}-final-delta`);
+            const finalMinDur = document.getElementById(`${module}-final-min-dur`);
+            const finalMaxDur = document.getElementById(`${module}-final-max-dur`);
+            const finalAu6 = document.getElementById(`${module}-final-au6`);
+            const finalAu12 = document.getElementById(`${module}-final-au12`);
+            const finalAu4 = document.getElementById(`${module}-final-au4`);
+
+            if (finalDelta && finalDelta.value) fd.append('delta', finalDelta.value);
+            if (finalMinDur && finalMinDur.value) fd.append('min_duration', finalMinDur.value);
+            if (finalMaxDur && finalMaxDur.value) fd.append('max_duration', finalMaxDur.value);
+            if (finalAu6 && finalAu6.value) fd.append('happy_au6_r', finalAu6.value);
+            if (finalAu12 && finalAu12.value) fd.append('happy_au12_r', finalAu12.value);
+            if (finalAu4 && finalAu4.value) fd.append('confused_au4_r', finalAu4.value);
+
+            const bodyDevice = document.getElementById('body-device');
+            if (module === 'body') {
+                if (bodyDevice) fd.append('device', bodyDevice.value);
+                const bodyParams = {};
+                document.querySelectorAll(`#preview-result-${module} [data-body-module][data-body-key]`).forEach((input) => {
+                    const moduleKey = input.dataset.bodyModule;
+                    const paramKey = input.dataset.bodyKey;
+                    const raw = input.value.trim();
+                    if (!moduleKey || !paramKey || raw === '') return;
+                    const num = Number(raw);
+                    if (!Number.isFinite(num)) return;
+                    if (!bodyParams[moduleKey]) bodyParams[moduleKey] = {};
+                    bodyParams[moduleKey][paramKey] = num;
+                });
+                fd.append('body_params_json', JSON.stringify(bodyParams));
+            }
+
+            markStep(module, 3);
+            resetResultsArea();
+            updateStatus('pending', '正在提交分析任务…');
+
+            try {
+                const data = await fetchJson('/api/analyze/final', { method: 'POST', body: fd });
+                pollTask(data.task_id, module);
+            } catch (e) {
+                updateStatus('error', '请求失败: ' + e.message);
+            }
+        }
+
+        async function pollTask(taskId, module) {
+            const info = document.getElementById('poll-info');
+            const token = ++activePollToken;
+            const poll = async () => {
+                if (token !== activePollToken) return;
+                try {
+                    const task = await fetchJson('/api/task/' + taskId);
+                    if (token !== activePollToken) return;
+                    updateStatus(task.status, statusText(task));
+                    info.textContent = JSON.stringify(task, null, 2);
+
+                    if (task.status === 'done') {
+                        markStep(module, 4);
+                        showResults(task.result);
+                    } else if (task.status === 'error') {
+                        info.textContent = task.traceback || task.error || '任务失败';
+                    } else {
+                        setTimeout(poll, 1500);
+                    }
+                } catch (e) {
+                    if (token !== activePollToken) return;
+                    updateStatus('error', '轮询失败: ' + e.message);
+                }
+            };
+            poll();
+        }
+
+        function statusText(task) {
+            if (task.status === 'pending') return '任务排队中…';
+            if (task.status === 'running') return '分析进行中，请稍候…';
+            if (task.status === 'done') return '分析完成';
+            if (task.status === 'error') return '分析出错: ' + (task.error || '');
+            return task.status;
+        }
+
+        function updateStatus(status, msg) {
+            const box = document.getElementById('status-box');
+            box.className = 'status-box show status-' + status;
+            box.textContent = msg;
+        }
+
+        function showResults(result) {
+            const area = document.getElementById('results-area');
+            if (!result) { area.innerHTML = '<p class="preview-note">无结果数据</p>'; return; }
+            if (result.status === 'error') {
+                area.innerHTML = `<p class="preview-error">分析出错: ${escapeHtml(result.message || '未知错误')}</p>`;
+                return;
+            }
+            let html = '';
+
+            // 躯体模块：summary 是完整流水线元数据，事件摘要在 summary.results 数组中
+            if (result.summary && Array.isArray(result.summary.results)) {
+                html += '<h3>模块结果</h3>';
+                for (const r of result.summary.results) {
+                    const label = r.label || r.module || '模块';
+                    if (r.status === 'error') {
+                        html += `<div class="result-item"><span>${escapeHtml(label)}</span>` +
+                            `<span style="color:var(--error)">出错: ${escapeHtml(r.error || '未知错误')}</span></div>`;
+                    } else {
+                        const note = r.note ? `（${escapeHtml(r.note)}）` : '';
+                        html += `<div class="result-item"><span>${escapeHtml(label)}</span><span>${r.event_count ?? 0} 个事件${note}</span></div>`;
+                    }
+                }
+                if (result.summary.parallel_fallback_error) {
+                    html += `<div class="result-item"><span>并行处理</span>` +
+                        `<span style="color:var(--error)">已回退为串行（${escapeHtml(result.summary.parallel_fallback_error)}）</span></div>`;
+                }
+            } else if (result.summary && typeof result.summary === 'object') {
+                html += '<h3>事件摘要</h3>';
+                for (const [k, v] of Object.entries(result.summary)) {
+                    if (v !== null && typeof v === 'object') continue;
+                    html += `<div class="result-item"><span>${escapeHtml(k)}</span><span>${escapeHtml(v)} 个事件</span></div>`;
+                }
+            }
+            if (result.report_files && result.report_files.length) {
+                html += '<h3>报告文件</h3>';
+                for (const f of result.report_files) {
+                    const name = f.split('/').pop().split('\\').pop();
+                    html += `<div class="result-item"><span>${escapeHtml(name)}</span></div>`;
+                }
+            }
+            if (result.intervals) {
+                if (Array.isArray(result.intervals)) {
+                    html += `<div class="result-item"><span>检测区间数</span><span>${result.intervals.length}</span></div>`;
+                } else if (typeof result.intervals === 'object') {
+                    html += '<h3>检测区间</h3>';
+                    for (const [k, v] of Object.entries(result.intervals)) {
+                        const n = Array.isArray(v) ? v.length : (typeof v === 'object' ? Object.keys(v).length : v);
+                        html += `<div class="result-item"><span>${escapeHtml(k)}</span><span>${escapeHtml(n)}</span></div>`;
+                    }
+                }
+            }
+            if (result.shake_events && result.shake_events.length) {
+                html += `<div class="result-item"><span>摇头事件</span><span>${result.shake_events.length}</span></div>`;
+            }
+
+            area.innerHTML = html || '<p class="preview-note">分析完成，无事件检出。</p>';
+        }
+    </script>
+</body>
+</html>

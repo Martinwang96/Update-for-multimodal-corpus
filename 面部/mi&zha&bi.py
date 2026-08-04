@@ -2,45 +2,30 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import rcParams
 import os
 from datetime import datetime
+from face_common import (load_openface_csv, calculate_frame_rate, ask_float,
+                         setup_matplotlib, get_timestamp_str, save_csv_report)
 
-# 设置字体为支持中文的字体
-rcParams['font.sans-serif'] = ['SimHei']  # 设置为 SimHei 或其他支持中文的字体
-rcParams['axes.unicode_minus'] = False  # 防止负号显示为方块
+setup_matplotlib()
 
-# --- detect_eye_states 函数 (保持不变) ---
-def detect_eye_states(file_path=None, visualize=True):
+# --- detect_eye_states 函数 ---
+def detect_eye_states(file_path=None, visualize=True, params=None):
     """
     从OpenFace输出CSV文件中检测眯眼、闭眼和眨眼状态
 
-    参数:
-    file_path (str): OpenFace输出CSV文件的路径
-    visualize (bool): 是否可视化结果
+    params: 非交互式参数 dict，提供时（即便是空 dict）跳过 ask_float/input() 调用，
+    缺失的键直接使用默认值，避免在Web 场景下阻塞等待终端输入。
 
-    返回:
-    tuple: (眯眼区间, 闭眼区间, 眨眼区间, 带有眼部状态标注的数据, 帧率)
+    返回: (眯眼区间, 闭眼区间, 眨眼区间, 带有眼部状态标注的数据, 帧率)
     """
-    # 1. 获取文件路径（如果未提供）
+    p = params or {}
     if file_path is None:
         file_path = input("请输入OpenFace CSV文件的路径：")
 
-    # 2. 读取并清理数据
-    print(f"正在读取文件: {file_path}")
-    try:
-        data = pd.read_csv(file_path)
-        # 清理列名中的空格
-        data.columns = data.columns.str.strip()
-        print(f"成功读取数据，共 {len(data)} 行")
-        if data.empty:
-            print("警告: 文件为空或无法正确解析。")
-            return [], [], [], None, 30 # 返回默认帧率
-    except FileNotFoundError:
-        print(f"错误: 文件未找到 {file_path}")
-        return [], [], [], None, 30
-    except Exception as e:
-        print(f"读取文件时出错: {e}")
+    data = load_openface_csv(file_path)
+    if data is None or data.empty:
+        print("警告: 文件为空或无法正确解析。")
         return [], [], [], None, 30
 
     # 3. 定义眼睑关键点 - 增加检查确保列存在
@@ -151,76 +136,23 @@ def detect_eye_states(file_path=None, visualize=True):
         data['is_blinking'] = False # 添加一个全为False的列，以便后续代码统一处理
 
     # 7. 获取帧率信息
-    frame_rate = 30.0 # 默认值
-    if 'timestamp' in data.columns:
-        timestamps = data['timestamp'].dropna().unique() # 去重和去NaN
-        if len(timestamps) > 1:
-            # 计算有效时间戳之间的平均间隔
-            valid_diffs = np.diff(timestamps)
-            valid_diffs = valid_diffs[valid_diffs > 0] # 只考虑正间隔
-            if len(valid_diffs) > 0:
-                avg_frame_time = np.mean(valid_diffs)
-                if avg_frame_time > 1e-6: # 避免除以极小值
-                    frame_rate = 1.0 / avg_frame_time
-                    print(f"从时间戳计算的帧率: {frame_rate:.2f} fps")
-                else:
-                    print("时间戳间隔过小或无效，使用默认帧率 30 fps")
-            else:
-                 print("未找到有效的时间戳间隔，使用默认帧率 30 fps")
-        else:
-            print("时间戳数量不足，无法计算帧率，使用默认帧率 30 fps")
-            # 尝试从文件名猜测帧率 (可选，比较复杂，暂不实现)
-    else:
-        print("警告: CSV文件中未找到 'timestamp' 列。")
-        # 尝试用帧号估算，如果帧号存在且看似连续
-        if 'frame' in data.columns and len(data) > 1:
-            frame_diff = np.mean(np.diff(data['frame'].dropna()))
-            if frame_diff == 1: # 如果帧号大致连续递增1
-                 try:
-                      user_fps = input(f"未找到时间戳，请确认视频帧率 (默认 {frame_rate}): ")
-                      frame_rate = float(user_fps) if user_fps else frame_rate
-                 except ValueError:
-                      print("输入无效，使用默认帧率 30 fps")
-            else:
-                 print("帧号不连续，无法估算帧率，使用默认帧率 30 fps")
-        else:
-             try:
-                 user_fps = input(f"未找到时间戳或帧号，请输入视频帧率 (默认 {frame_rate}): ")
-                 frame_rate = float(user_fps) if user_fps else frame_rate
-             except ValueError:
-                 print("输入无效，使用默认帧率 30 fps")
+    frame_rate = calculate_frame_rate(data)
 
     # 8. 获取用户参数
-    ear_threshold = 0.18 # 默认值
-    try:
-        user_thresh = input(f"请输入眼睛纵横比(EAR)的阈值 (推荐0.1-0.25，默认 {ear_threshold})：")
-        ear_threshold = float(user_thresh) if user_thresh else ear_threshold
-    except ValueError:
-        print(f"输入无效，使用默认阈值 {ear_threshold}")
-
-    min_squint_duration = 0.5 # 秒，默认值
-    try:
-        user_squint_dur = input(f"请输入最小眯眼持续时间（秒，默认 {min_squint_duration})：")
-        min_squint_duration = float(user_squint_dur) if user_squint_dur else min_squint_duration
-    except ValueError:
-        print(f"输入无效，使用默认持续时间 {min_squint_duration} 秒")
-
-    long_closed_eyes_threshold = 1.0 # 秒，默认值
-    try:
-        user_closed_dur = input(f"请输入闭眼的阈值 (秒, 默认 {long_closed_eyes_threshold}): ")
-        long_closed_eyes_threshold = float(user_closed_dur) if user_closed_dur else long_closed_eyes_threshold
-    except ValueError:
-        print(f"输入无效，使用默认阈值 {long_closed_eyes_threshold} 秒")
-
-    min_blink_duration = 0.3 # 秒，默认值
-    if has_au45:
-        try:
-            user_blink_dur = input(f"请输入最小眨眼持续时间（秒，基于AU45，默认 {min_blink_duration})：")
-            min_blink_duration = float(user_blink_dur) if user_blink_dur else min_blink_duration
-        except ValueError:
-            print(f"输入无效，使用默认持续时间 {min_blink_duration} 秒")
+    non_interactive = params is not None
+    if non_interactive:
+        ear_threshold = p.get('ear_threshold', 0.18)
+        min_squint_duration = p.get('min_squint_duration', 0.5)
+        long_closed_eyes_threshold = p.get('long_closed_eyes_threshold', 1.0)
+        min_blink_duration = p.get('min_blink_duration', 0.3) if has_au45 else 0
     else:
-        min_blink_duration = 0 # 如果没有AU45数据，则不检测持续眨眼
+        ear_threshold = ask_float("请输入眼睛纵横比(EAR)的阈值 (推荐0.1-0.25)", 0.18)
+        min_squint_duration = ask_float("请输入最小眯眼持续时间（秒）", 0.5)
+        long_closed_eyes_threshold = ask_float("请输入闭眼的阈值（秒）", 1.0)
+        if has_au45:
+            min_blink_duration = ask_float("请输入最小眨眼持续时间（秒，基于AU45）", 0.3)
+        else:
+            min_blink_duration = 0
 
     # 计算帧数
     # 确保帧率大于0

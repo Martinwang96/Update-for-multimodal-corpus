@@ -2,6 +2,8 @@
 from pathlib import Path
 import json
 import numpy as np
+import matplotlib
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.ticker import FuncFormatter # 用于格式化时间轴 (从你的第一个脚本引入)
@@ -183,7 +185,7 @@ def interpolate_invalid_frames_2d(frames_coords, valid_flags):
 
     # 检查开头/结尾的NaN，并用最近的有效值填充
     if df_interpolated.isnull().values.any():
-        df_interpolated = df_interpolated.fillna(method='ffill').fillna(method='bfill')
+        df_interpolated = df_interpolated.ffill().bfill()
 
     final_result = df_interpolated.to_numpy()
     

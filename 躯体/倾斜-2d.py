@@ -10,6 +10,8 @@ Copyright (c) 2025 by Martin Wang in Language of Sciences, Shanghai Internationa
 from pathlib import Path
 import json
 import numpy as np
+import matplotlib
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.ticker import FuncFormatter # 用于格式化时间轴
@@ -230,7 +232,7 @@ def smooth_angles(angles, window, poly):
 
     angles_series = pd.Series(angles_arr)
     angles_filled = angles_series.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=int(eff_window*2))
-    angles_filled = angles_filled.fillna(method='ffill').fillna(method='bfill')
+    angles_filled = angles_filled.ffill().bfill()
     angles_to_smooth = angles_filled.to_numpy()
 
     if np.any(np.isnan(angles_to_smooth)):
@@ -260,7 +262,7 @@ def compute_angular_velocity(angles_deg, fps):
     angles_series = pd.Series(angles_arr)
     limit_frames = max(5, int(fps * 0.5)) if fps > 0 else 5
     angles_filled = angles_series.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=limit_frames)
-    angles_filled = angles_filled.fillna(method='ffill').fillna(method='bfill')
+    angles_filled = angles_filled.ffill().bfill()
     angles_ready = angles_filled.to_numpy()
 
     if np.all(np.isnan(angles_ready)): return np.full_like(angles_arr, np.nan)
@@ -677,7 +679,7 @@ if __name__ == "__main__":
         if outlier_thresh > 0 and len(tilt_angles_0_180_corrected) > 1:
             angles_series = pd.Series(tilt_angles_0_180_corrected)
             fill_limit = max(5, int(fps * 0.2)) if fps > 0 else 5
-            angles_filled_temp = angles_series.interpolate(method='linear', limit_direction='both', limit=fill_limit).fillna(method='ffill').fillna(method='bfill')
+            angles_filled_temp = angles_series.interpolate(method='linear', limit_direction='both', limit=fill_limit).ffill().bfill()
             angles_for_diff = angles_filled_temp.to_numpy()
             if not np.all(np.isnan(angles_for_diff)):
                 angle_diff = np.diff(angles_for_diff, prepend=np.nan)

@@ -10,6 +10,8 @@ Copyright (c) 2025 by Martin Wang in Language of Sciences, Shanghai Internationa
 from pathlib import Path
 import json
 import numpy as np
+import matplotlib
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.ticker import FuncFormatter # 用于格式化时间轴
@@ -169,7 +171,7 @@ def interpolate_single_coordinate(coords, valid_flags, limit_gap_frames=15):
     s = pd.Series(interpolated_coords)
     s_interpolated = s.interpolate(method='linear', axis=0, limit=limit_gap_frames,
                                      limit_direction='both', limit_area=None)
-    s_interpolated = s_interpolated.fillna(method='ffill').fillna(method='bfill')
+    s_interpolated = s_interpolated.ffill().bfill()
 
     final_nan = s_interpolated.isnull().sum()
     if final_nan > 0:
@@ -198,7 +200,7 @@ def smooth_single_coordinate(coords, window_length=7, poly_order=2):
 
     coords_series = pd.Series(coords_arr)
     coords_filled = coords_series.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=int(eff_window*2))
-    coords_filled = coords_filled.fillna(method='ffill').fillna(method='bfill')
+    coords_filled = coords_filled.ffill().bfill()
     coords_to_smooth = coords_filled.to_numpy()
 
     if np.any(np.isnan(coords_to_smooth)):
@@ -245,7 +247,7 @@ def calculate_relative_y_and_shrug_distance(ls_y, rs_y, lh_y, rh_y, fps, baselin
         relative_y_series = pd.Series(relative_y)
         # 填充 NaN 以便滤波
         fill_limit = max(5, int(fps * 0.5)) if fps > 0 else 5 # 允许填充稍大间隙
-        relative_y_filled = relative_y_series.interpolate(method='linear', limit_direction='both', limit=fill_limit).fillna(method='ffill').fillna(method='bfill')
+        relative_y_filled = relative_y_series.interpolate(method='linear', limit_direction='both', limit=fill_limit).ffill().bfill()
         relative_y_ready = relative_y_filled.to_numpy()
 
         if not np.any(np.isnan(relative_y_ready)):

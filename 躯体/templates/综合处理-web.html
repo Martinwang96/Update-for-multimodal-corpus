@@ -1,525 +1,1337 @@
-﻿<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>躯体2D综合处理平台</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='综合处理-web.css') }}" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>姿态综合分析系统</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg-deep:      #080d14;
+  --bg-panel:     #0d1520;
+  --bg-card:      #111c2b;
+  --bg-elevated:  #162336;
+  --border:       #1e3048;
+  --border-glow:  #1d4a7a;
+  --cyan:         #00d4ff;
+  --cyan-dim:     #0096b8;
+  --green:        #00ff88;
+  --green-dim:    #00b85c;
+  --amber:        #ffb400;
+  --red:          #ff3d5e;
+  --text-primary: #dff0ff;
+  --text-secondary: #7a9bbf;
+  --text-muted:   #3d5a78;
+  --font-mono:    'JetBrains Mono', monospace;
+  --font-sans:    'Noto Sans SC', sans-serif;
+  --radius:       6px;
+  --radius-lg:    10px;
+  --transition:   0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── HEADER ─────────────────────────────────────── */
+.site-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 28px; height: 56px;
+  background: rgba(8,13,20,0.95);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  color: var(--cyan); letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.header-divider { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+.header-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.55;transform:scale(.8)} }
+
+/* ─── LAYOUT ─────────────────────────────────────── */
+.app-layout { display: flex; min-height: calc(100vh - 56px); }
+
+/* ─── SIDEBAR ────────────────────────────────────── */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg-panel); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+}
+.sidebar-section { padding: 18px 14px 8px; }
+.sidebar-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; padding: 0 4px; margin-bottom: 6px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; color: var(--text-secondary); font-size: 13px; transition: all var(--transition); border: 1px solid transparent; user-select: none; margin-bottom: 2px; }
+.nav-item:hover { color: var(--text-primary); background: var(--bg-card); border-color: var(--border); }
+.nav-item.active { color: var(--cyan); background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.2); }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-badge { margin-left: auto; background: rgba(0,212,255,0.12); color: var(--cyan); font-family: var(--font-mono); font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid rgba(0,212,255,0.2); }
+.sidebar-separator { height: 1px; background: var(--border); margin: 10px 14px; }
+
+/* ─── MAIN ────────────────────────────────────────── */
+.main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.page { display: none; flex-direction: column; flex: 1; }
+.page.active { display: flex; }
+
+/* ─── VIDEO HERO ─────────────────────────────────── */
+.video-hero { background: linear-gradient(180deg, #0a1628 0%, var(--bg-deep) 100%); border-bottom: 1px solid var(--border); padding: 28px 28px 0; }
+.hero-eyebrow { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+.hero-eyebrow-line { width: 24px; height: 1px; background: var(--cyan); }
+.hero-title { font-size: 22px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em; line-height: 1.3; margin-bottom: 6px; }
+.hero-subtitle { font-size: 13px; color: var(--text-secondary); font-weight: 300; margin-bottom: 20px; }
+
+/* ─── VIDEO INPUT BLOCK ──────────────────────────── */
+.video-input-block { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 16px; }
+.video-input-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.vinput-tab { flex: 1; padding: 10px 16px; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all var(--transition); user-select: none; text-align: center; }
+.vinput-tab:hover { color: var(--text-secondary); }
+.vinput-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); background: rgba(0,212,255,0.04); }
+.vinput-body { padding: 14px 16px; }
+
+/* ─── INPUTS ──────────────────────────────────────── */
+.path-row { display: flex; gap: 8px; align-items: center; }
+.input-wrap { position: relative; flex: 1; }
+.input-icon { position: absolute; left: 10px; font-size: 12px; color: var(--text-muted); pointer-events: none; top: 50%; transform: translateY(-50%); }
+
+input[type="text"], input[type="number"], select {
+  width: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text-primary); font-family: var(--font-mono); font-size: 12px; padding: 8px 10px;
+  transition: border-color var(--transition), box-shadow var(--transition); outline: none; -webkit-appearance: none;
+}
+input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--cyan-dim); box-shadow: 0 0 0 2px rgba(0,212,255,0.10); }
+.path-input { padding-left: 30px; }
+select { padding-right: 28px; cursor: pointer; }
+select option { background: var(--bg-card); }
+
+/* ─── UPLOAD ──────────────────────────────────────── */
+.upload-drop-zone { border: 1.5px dashed var(--border-glow); border-radius: var(--radius-lg); padding: 28px 20px; text-align: center; cursor: pointer; transition: all var(--transition); position: relative; }
+.upload-drop-zone:hover, .upload-drop-zone.drag-over { border-color: var(--cyan-dim); background: rgba(0,212,255,0.04); }
+.upload-drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+.upload-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.upload-hint { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.upload-progress-wrap { margin-top: 10px; display: none; }
+.upload-progress-track { height: 3px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; }
+.upload-progress-fill { height: 100%; background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); width: 0%; transition: width 0.3s ease; }
+.upload-file-name { font-family: var(--font-mono); font-size: 11px; color: var(--cyan); margin-top: 8px; display: none; }
+
+/* ─── PREVIEW ─────────────────────────────────────── */
+.video-preview-area { display: flex; gap: 16px; padding-bottom: 20px; }
+.video-preview-box { width: 240px; flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; position: relative; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; }
+.preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; text-align: center; }
+.preview-placeholder-icon { font-size: 28px; opacity: 0.35; }
+#previewCover { width: 100%; height: 100%; object-fit: cover; display: none; }
+.preview-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 10px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quick-params-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+
+/* ─── MODULES ROW ─────────────────────────────────── */
+.modules-row { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 20px; }
+.module-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-card); cursor: pointer; transition: all var(--transition); user-select: none; }
+.module-chip:hover { border-color: var(--border-glow); }
+.module-chip.selected { border-color: rgba(0,212,255,0.35); background: rgba(0,212,255,0.06); }
+.module-chip input[type="checkbox"] { display: none; }
+.chip-indicator { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--text-muted); transition: all var(--transition); flex-shrink: 0; }
+.module-chip.selected .chip-indicator { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.chip-label { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.module-chip.selected .chip-label { color: var(--cyan); }
+.chip-meta { font-size: 11px; color: var(--text-muted); }
+
+/* ─── BUTTONS ─────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; border: 1px solid transparent; transition: all var(--transition); white-space: nowrap; outline: none; flex-shrink: 0; }
+.btn-primary { background: linear-gradient(135deg,#0073a8,#005080); color: var(--cyan); border-color: var(--cyan-dim); box-shadow: 0 0 16px rgba(0,212,255,0.12); }
+.btn-primary:hover { background: linear-gradient(135deg,#0095cc,#0073a8); box-shadow: 0 0 24px rgba(0,212,255,0.22); transform: translateY(-1px); }
+.btn-accent { background: linear-gradient(135deg,#004d2e,#003320); color: var(--green); border-color: var(--green-dim); box-shadow: 0 0 16px rgba(0,255,136,0.08); }
+.btn-accent:hover { background: linear-gradient(135deg,#006b3e,#004d2e); box-shadow: 0 0 24px rgba(0,255,136,0.18); transform: translateY(-1px); }
+.btn-ghost { background: transparent; color: var(--text-secondary); border-color: var(--border); }
+.btn-ghost:hover { color: var(--text-primary); border-color: var(--border-glow); background: var(--bg-card); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn-lg { padding: 10px 24px; font-size: 13px; }
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+
+/* ─── TAB TOOLBAR ─────────────────────────────────── */
+.tab-toolbar { display: flex; align-items: center; gap: 2px; background: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 0 12px; overflow-x: auto; flex-shrink: 0; }
+.tab-btn { display: flex; align-items: center; gap: 7px; padding: 0 14px; height: 42px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-muted); cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; transition: all var(--transition); white-space: nowrap; position: relative; top: 1px; }
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+/* ─── CONTENT AREA ────────────────────────────────── */
+.content-area { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.content-area::-webkit-scrollbar { width: 4px; }
+.content-area::-webkit-scrollbar-track { background: transparent; }
+.content-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── SECTION HEADER ──────────────────────────────── */
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.section-title { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.15em; text-transform: uppercase; white-space: nowrap; }
+.section-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ─── FIELD ────────────────────────────────────────── */
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-family: var(--font-mono); font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.field-hint { font-size: 10px; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+
+/* ─── INFO BANNER ─────────────────────────────────── */
+.info-banner { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: var(--radius); background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.18); font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.55; }
+.info-banner-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.info-banner.warn { background: rgba(255,180,0,0.05); border-color: rgba(255,180,0,0.22); }
+.info-banner.warn .info-banner-icon { color: var(--amber); }
+
+/* ─── PARAM CARDS ─────────────────────────────────── */
+.param-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 14px; transition: border-color var(--transition); }
+.param-card:hover { border-color: var(--border-glow); }
+.param-card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+.param-card-title { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); letter-spacing: 0.04em; }
+.card-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.card-dot.cyan  { background: var(--cyan);  box-shadow: 0 0 5px var(--cyan); }
+.card-dot.green { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.card-dot.amber { background: var(--amber); box-shadow: 0 0 5px var(--amber); }
+.card-dot.red   { background: var(--red);   box-shadow: 0 0 5px var(--red); }
+.param-card-toggle { font-size: 10px; color: var(--text-muted); transition: transform var(--transition); }
+.param-card-toggle.collapsed { transform: rotate(-90deg); }
+.param-card-body { padding: 16px; }
+.param-card-body.collapsed { display: none; }
+.params-grid      { display: grid; grid-template-columns: repeat(auto-fill,minmax(155px,1fr)); gap: 12px; }
+.params-grid-wide { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 12px; }
+
+/* ─── COCO KP MAP ─────────────────────────────────── */
+.kp-map-wrap { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.kp-map-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; }
+.kp-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(136px,1fr)); gap: 5px; }
+.kp-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius); border: 1px solid transparent; cursor: pointer; transition: all var(--transition); user-select: none; }
+.kp-item:hover { background: var(--bg-card); border-color: var(--border); }
+.kp-item.kp-left  { background: rgba(0,212,255,0.07); border-color: rgba(0,212,255,0.28); }
+.kp-item.kp-right { background: rgba(0,255,136,0.07); border-color: rgba(0,255,136,0.28); }
+.kp-num { font-family: var(--font-mono); font-size: 11px; font-weight: 700; width: 20px; text-align: center; flex-shrink: 0; color: var(--text-muted); }
+.kp-item.kp-left  .kp-num { color: var(--cyan); }
+.kp-item.kp-right .kp-num { color: var(--green); }
+.kp-name-wrap .kp-zh   { font-size: 11px; color: var(--text-secondary); line-height: 1.2; }
+.kp-name-wrap .kp-en   { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+.kp-tag { margin-left: auto; font-family: var(--font-mono); font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; display: none; }
+.kp-item.kp-left  .kp-tag { display: block; background: rgba(0,212,255,0.18); color: var(--cyan); }
+.kp-item.kp-right .kp-tag { display: block; background: rgba(0,255,136,0.18); color: var(--green); }
+.kp-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); align-items: center; }
+.kp-legend-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+.kp-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.kp-hint { margin-left: auto; font-size: 10px; color: var(--text-muted); }
+.kp-idx-row { display: flex; gap: 12px; margin-top: 12px; }
+.kp-idx-row .field-group { flex: 1; }
+
+/* ─── TOGGLE ────────────────────────────────────────── */
+.toggle-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.toggle-wrap { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle-wrap input[type="checkbox"] { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track { position: absolute; inset: 0; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all var(--transition); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-muted); transition: all var(--transition); }
+.toggle-wrap input:checked ~ .toggle-track { background: rgba(0,212,255,0.15); border-color: var(--cyan-dim); }
+.toggle-wrap input:checked ~ .toggle-track .toggle-thumb { left: 19px; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.toggle-label { font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+
+/* ─── JOB MONITOR ─────────────────────────────────── */
+.job-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.job-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); }
+.job-id-display { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+.job-id-display span { color: var(--cyan); font-weight: 600; }
+.job-status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.badge-queued    { background: rgba(122,155,191,0.12); color: var(--text-secondary); border: 1px solid rgba(122,155,191,0.25); }
+.badge-running   { background: rgba(0,212,255,0.10);   color: var(--cyan);           border: 1px solid rgba(0,212,255,0.3);   }
+.badge-completed { background: rgba(0,255,136,0.10);   color: var(--green);          border: 1px solid rgba(0,255,136,0.3);   }
+.badge-error     { background: rgba(255,61,94,0.10);   color: var(--red);            border: 1px solid rgba(255,61,94,0.3);   }
+.job-body { padding: 16px; }
+.progress-track { height: 4px; background: var(--bg-elevated); border-radius: 2px; overflow: hidden; margin: 12px 0; }
+.progress-fill { height: 100%; background: linear-gradient(90deg,var(--cyan-dim),var(--cyan)); border-radius: 2px; transition: width 0.5s ease; width: 0%; position: relative; }
+.progress-fill::after { content:''; position: absolute; right: 0; top: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.job-meta-row { display: flex; gap: 20px; margin-bottom: 12px; flex-wrap: wrap; }
+.job-meta-item { display: flex; flex-direction: column; gap: 2px; }
+.job-meta-label { font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; }
+.job-meta-value { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.job-message-area { background: var(--bg-deep); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--cyan); min-height: 32px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.msg-prefix { color: var(--text-muted); }
+.log-box { background: var(--bg-deep); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); max-height: 180px; overflow-y: auto; line-height: 1.7; }
+.log-box::-webkit-scrollbar { width: 4px; }
+.log-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.log-line { padding: 1px 0; }
+.log-line::before { content:'▸ '; color: var(--text-muted); font-size: 9px; }
+
+/* ─── RESULTS ─────────────────────────────────────── */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 12px; margin-bottom: 18px; }
+.summary-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; transition: border-color var(--transition); }
+.summary-card:hover { border-color: var(--border-glow); }
+.summary-card-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+.summary-card-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--cyan); line-height: 1; margin-bottom: 4px; }
+.summary-card-sub { font-size: 11px; color: var(--text-secondary); }
+.module-result-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.module-result-name { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.module-result-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+.result-ok  { border-left: 3px solid var(--green); }
+.result-err { border-left: 3px solid var(--red); }
+
+/* ─── HISTORY ─────────────────────────────────────── */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); transition: all var(--transition); }
+.history-item:hover { border-color: var(--border-glow); background: var(--bg-elevated); }
+.history-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.history-info { flex: 1; min-width: 0; }
+.history-id { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.history-meta { font-size: 11px; color: var(--text-secondary); }
+.history-time { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+
+/* ─── RUN FOOTER ──────────────────────────────────── */
+.run-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 28px; background: var(--bg-panel); border-top: 1px solid var(--border); position: sticky; bottom: 0; z-index: 10; }
+.run-footer-info { flex: 1; font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+.run-footer-info.error-msg { color: var(--red); }
+
+/* ─── EMPTY ───────────────────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: var(--text-muted); text-align: center; }
+.empty-icon { font-size: 36px; opacity: 0.3; }
+.empty-text { font-size: 13px; line-height: 1.6; max-width: 280px; }
+
+/* ─── MISC ────────────────────────────────────────── */
+.mt-12 { margin-top: 12px; }
+.mt-18 { margin-top: 18px; }
+
+/* ─── ANIMATIONS ──────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+.fade-in { animation: fadeIn 0.22s ease; }
+
+/* ─── SUBMIT OVERLAY ──────────────────────────────── */
+#submitOverlay { position: fixed; inset: 0; background: rgba(8,13,20,0.72); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(4px); }
+#submitOverlay.visible { display: flex; }
+.overlay-card { background: var(--bg-card); border: 1px solid var(--border-glow); border-radius: var(--radius-lg); padding: 32px 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.overlay-spinner { width: 40px; height: 40px; border: 2px solid var(--bg-elevated); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.7s linear infinite; }
+.overlay-text { font-family: var(--font-mono); font-size: 13px; color: var(--cyan); letter-spacing: 0.06em; }
+
+@media (max-width: 800px) {
+  .sidebar { display: none; }
+  .video-preview-area { flex-direction: column; }
+  .video-preview-box { width: 100%; }
+  .quick-params-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
 </head>
 <body>
-  <main class="page">
-    <header class="page-head">
-      <h1>躯体2D综合处理平台</h1>
-      <p>视频入口 -> body-recognition -> 4模块分析 -> 层级CSV与汇总</p>
-    </header>
 
-    <section class="panel progress-panel">
-      <h2>流程进度</h2>
-      <div class="stage-bar" id="stageBar">
-        <div class="stage-item pending" data-stage="prepare">
-          <div class="stage-dot"></div>
-          <div class="stage-text">准备阶段</div>
-        </div>
-        <div class="stage-link" data-link="prepare-recognition"></div>
-        <div class="stage-item pending" data-stage="recognition">
-          <div class="stage-dot"></div>
-          <div class="stage-text">识别阶段</div>
-        </div>
-        <div class="stage-link" data-link="recognition-processing"></div>
-        <div class="stage-item pending" data-stage="processing">
-          <div class="stage-dot"></div>
-          <div class="stage-text">数据处理阶段</div>
-        </div>
+<!-- ══════════ HEADER ══════════ -->
+<header class="site-header">
+  <div class="header-logo">
+    <div class="logo-icon">⬡</div>
+    POSTURE · ANALYSIS
+  </div>
+  <div class="header-divider"></div>
+  <div class="header-status">
+    <div class="status-dot"></div>
+    SYSTEM ONLINE
+  </div>
+</header>
+
+<div class="app-layout">
+
+  <!-- ══════════ SIDEBAR ══════════ -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">主功能</div>
+      <div class="nav-item active" onclick="switchPage(this,'video-page')">
+        <span class="nav-icon">▶</span><span>视频识别</span>
+        <span class="nav-badge">CORE</span>
       </div>
-      <div class="overall-progress">
-        <div class="overall-progress-fill" id="overallProgressFill" style="width:0%"></div>
+      <div class="nav-item" onclick="switchPage(this,'pose-page')">
+        <span class="nav-icon">◈</span><span>姿态检测</span>
       </div>
-      <div class="progress-metrics">
-        <span id="progressText">等待开始</span>
-        <span id="elapsedText">已耗时: --</span>
-        <span id="etaText">预计剩余: --</span>
+      <div class="nav-item" onclick="switchPage(this,'keypoint-page')">
+        <span class="nav-icon">⊕</span><span>关键点可视化</span>
       </div>
-    </section>
+    </div>
+    <div class="sidebar-separator"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">分析结果</div>
+      <div class="nav-item" onclick="switchPage(this,'result-page')">
+        <span class="nav-icon">◎</span><span>结果分析</span>
+      </div>
+      <div class="nav-item" onclick="switchPage(this,'history-page')">
+        <span class="nav-icon">⊞</span><span>历史记录</span>
+      </div>
+    </div>
+  </nav>
 
-    <section class="panel error-panel hidden" id="runtimeErrorPanel">
-      <h2>运行错误</h2>
-      <pre id="runtimeErrorText"></pre>
-    </section>
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="main-content">
 
-    <form id="pipelineForm" class="form-stack">
-      <section class="panel">
-        <h2>视频输入</h2>
-        <div class="grid two">
-          <div class="field wide">
-            <label for="input_path">视频路径</label>
-            <input id="input_path" name="input_path" value="{{ form.input_path }}" placeholder="例如：D:\\data\\demo.mp4" />
+    <!-- ╔══════════════════════╗
+         ║  PAGE 1 · VIDEO      ║
+         ╚══════════════════════╝ -->
+    <section class="page active" id="video-page">
+
+      <div class="video-hero">
+        <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div>视频识别核心模块</div>
+        <h1 class="hero-title">姿态视频综合处理</h1>
+        <p class="hero-subtitle">选择视频来源，配置识别参数，启动四模块并行分析流程</p>
+
+        <!-- VIDEO INPUT BLOCK -->
+        <div class="video-input-block">
+          <div class="video-input-tabs">
+            <div class="vinput-tab active" onclick="switchVideoInput(this,'vi-path')">📁 &nbsp;本地路径</div>
+            <div class="vinput-tab" onclick="switchVideoInput(this,'vi-upload')">⬆ &nbsp;文件上传</div>
           </div>
-          <div class="field wide">
-            <label for="output_root">输出根目录</label>
-            <input id="output_root" name="output_root" value="{{ form.output_root }}" />
+
+          <!-- PATH MODE -->
+          <div class="vinput-body" id="vi-path">
+            <div class="path-row">
+              <div class="input-wrap">
+                <span class="input-icon">📄</span>
+                <input type="text" id="input_path" name="input_path" class="path-input"
+                       placeholder="/path/to/video.mp4  ·  支持 mp4 mov avi mkv webm m4v"
+                       value="{{ form.input_path }}"
+                       oninput="onVideoPathChange(this.value)"/>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="triggerPreview()">▶ 预览</button>
+            </div>
+          </div>
+
+          <!-- UPLOAD MODE -->
+          <div class="vinput-body" id="vi-upload" style="display:none">
+            <div class="upload-drop-zone" id="dropZone"
+                 ondragover="event.preventDefault();this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="handleDrop(event)">
+              <input type="file" id="fileInput" accept=".mp4,.mov,.avi,.mkv,.webm,.m4v" onchange="handleFileSelect(this)"/>
+              <div class="upload-icon">🎬</div>
+              <div class="upload-label">拖放视频文件到此处，或点击选择</div>
+              <div class="upload-hint">支持 · mp4 &nbsp;mov &nbsp;avi &nbsp;mkv &nbsp;webm &nbsp;m4v</div>
+            </div>
+            <div class="upload-progress-wrap" id="uploadProgressWrap">
+              <div class="upload-progress-track">
+                <div class="upload-progress-fill" id="uploadFill"></div>
+              </div>
+            </div>
+            <div class="upload-file-name" id="uploadFileName"></div>
           </div>
         </div>
 
-        <div class="preview-actions">
-          <button class="btn ghost" id="btnPreviewCover" type="button">预览首帧</button>
-          <button class="btn ghost" id="btnLoadFullVideo" type="button">加载完整视频预览</button>
-          <span class="preview-hint" id="previewHint">默认仅加载首帧，提升响应速度。</span>
-        </div>
-
-        <div class="preview-box">
-          <div class="preview-head">输入视频预览</div>
-          <img id="coverPreviewImg" alt="视频首帧预览" class="cover-preview hidden" />
-          <video id="fullVideoPreview" controls preload="metadata" class="hidden"></video>
-          <div class="empty-preview" id="emptyPreview">输入有效视频路径后可预览。</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>body-recognition 参数</h2>
-        <div class="grid three">
-          <div class="field wide"><label>识别Python路径</label><input name="rec_python" value="{{ form.rec_python }}" /></div>
-          <div class="field"><label>pose2d</label><input name="rec_pose2d" value="{{ form.rec_pose2d }}" /></div>
-          <div class="field"><label>batch_size</label><input name="rec_batch_size" value="{{ form.rec_batch_size }}" /></div>
-          <div class="field"><label>device</label><input name="rec_device" value="{{ form.rec_device }}" /></div>
-          <div class="field"><label>score_thresh</label><input name="rec_score_thresh" value="{{ form.rec_score_thresh }}" /></div>
-          <div class="field">
-            <label>后续分析JSON来源</label>
-            <select name="rec_json_source">
-              <option value="tonly" {% if form.rec_json_source == 'tonly' %}selected{% endif %}>tonly</option>
-              <option value="raw" {% if form.rec_json_source == 'raw' %}selected{% endif %}>raw</option>
-            </select>
+        <!-- PREVIEW + QUICK PARAMS -->
+        <div class="video-preview-area">
+          <div class="video-preview-box">
+            <div class="preview-placeholder" id="previewPlaceholder">
+              <div class="preview-placeholder-icon">🎞</div>
+              <div>选择视频后<br>自动预览封面</div>
+            </div>
+            <img id="previewCover" alt="封面"/>
+            <div class="preview-overlay" id="previewOverlay"></div>
           </div>
-        </div>
-        <div class="checks">
-          <label><input type="checkbox" name="rec_save_vis" {% if form.rec_save_vis %}checked{% endif %} /> 生成识别可视化视频</label>
-        </div>
-      </section>
 
-      <section class="panel">
-        <h2>全局参数</h2>
-        <div class="grid three">
-          <div class="field"><label>FPS</label><input name="fps" value="{{ form.fps }}" /></div>
-          <div class="field"><label>最小关键点置信度(0~1)</label><input name="min_confidence" value="{{ form.min_confidence }}" /></div>
-          <div class="field"><label>模块选择</label>
-            <div class="checks inline">
-              <label><input type="checkbox" name="modules" value="tilt" {% if 'tilt' in form.modules %}checked{% endif %}/>倾斜</label>
-              <label><input type="checkbox" name="modules" value="shrug" {% if 'shrug' in form.modules %}checked{% endif %}/>耸肩</label>
-              <label><input type="checkbox" name="modules" value="displacement" {% if 'displacement' in form.modules %}checked{% endif %}/>位移</label>
-              <label><input type="checkbox" name="modules" value="rotation" {% if 'rotation' in form.modules %}checked{% endif %}/>转动</label>
+          <div class="quick-params-grid">
+            <div class="field-group">
+              <div class="field-label">输出根目录</div>
+              <input type="text" name="output_root" value="{{ form.output_root }}"/>
+            </div>
+            <div class="field-group">
+              <div class="field-label">FPS</div>
+              <input type="number" name="fps" value="{{ form.fps }}" step="0.1" min="0.1"/>
+            </div>
+            <div class="field-group">
+              <div class="field-label">最小关键点置信度</div>
+              <input type="number" name="min_confidence" value="{{ form.min_confidence }}" step="0.01" min="0" max="1"/>
+            </div>
+            <div class="field-group">
+              <div class="field-label">识别设备</div>
+              <select name="rec_device">
+                <option value="auto"   {% if form.rec_device=='auto'   %}selected{% endif %}>auto（自动）</option>
+                <option value="cpu"    {% if form.rec_device=='cpu'    %}selected{% endif %}>cpu</option>
+                <option value="cuda:0" {% if form.rec_device=='cuda:0' %}selected{% endif %}>cuda:0</option>
+              </select>
             </div>
           </div>
         </div>
-        <div class="checks">
-          <label><input type="checkbox" name="save_plots" {% if form.save_plots %}checked{% endif %}/> 保存分析图（会更慢）</label>
-          <label><input type="checkbox" name="parallel" {% if form.parallel %}checked{% endif %}/> 并行执行模块</label>
+
+        <!-- MODULES -->
+        <div class="section-header" style="margin-bottom:10px">
+          <span class="section-title">启用分析模块</span>
+          <div class="section-line"></div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">全部勾选 = 四模块并行</span>
         </div>
-      </section>
-
-      <section class="panel">
-        <h2>模块参数（保持原逻辑）</h2>
-        <div class="grid two cards">
-          <article class="module-card">
-            <h3>倾斜</h3>
-            <div class="field"><label>smooth_window(奇数>=3)</label><input name="tilt_smooth_window" value="{{ form.tilt_smooth_window }}" /></div>
-            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="tilt_smooth_poly" value="{{ form.tilt_smooth_poly }}" /></div>
-            <div class="field"><label>outlier_diff_threshold</label><input name="tilt_outlier_diff_threshold" value="{{ form.tilt_outlier_diff_threshold }}" /></div>
-            <div class="field"><label>threshold_override(可空)</label><input name="tilt_threshold_override" value="{{ form.tilt_threshold_override }}" /></div>
-            <div class="field"><label>min_duration_sec</label><input name="tilt_min_duration_sec" value="{{ form.tilt_min_duration_sec }}" /></div>
-            <div class="field"><label>max_duration_sec</label><input name="tilt_max_duration_sec" value="{{ form.tilt_max_duration_sec }}" /></div>
-            <div class="field"><label>merge_gap_sec</label><input name="tilt_merge_gap_sec" value="{{ form.tilt_merge_gap_sec }}" /></div>
-          </article>
-
-          <article class="module-card">
-            <h3>耸肩</h3>
-            <div class="field"><label>smooth_window(奇数>=3)</label><input name="shrug_smooth_window" value="{{ form.shrug_smooth_window }}" /></div>
-            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="shrug_smooth_poly" value="{{ form.shrug_smooth_poly }}" /></div>
-            <div class="field"><label>baseline_window_sec</label><input name="shrug_baseline_window_sec" value="{{ form.shrug_baseline_window_sec }}" /></div>
-            <div class="field"><label>threshold_override(可空)</label><input name="shrug_threshold_override" value="{{ form.shrug_threshold_override }}" /></div>
-            <div class="field"><label>min_duration_sec</label><input name="shrug_min_duration_sec" value="{{ form.shrug_min_duration_sec }}" /></div>
-            <div class="field"><label>max_duration_sec</label><input name="shrug_max_duration_sec" value="{{ form.shrug_max_duration_sec }}" /></div>
-            <div class="field"><label>merge_gap_sec</label><input name="shrug_merge_gap_sec" value="{{ form.shrug_merge_gap_sec }}" /></div>
-          </article>
-
-          <article class="module-card">
-            <h3>位移</h3>
-            <div class="field"><label>smooth_window(奇数>=3)</label><input name="displacement_smooth_window" value="{{ form.displacement_smooth_window }}" /></div>
-            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="displacement_smooth_poly" value="{{ form.displacement_smooth_poly }}" /></div>
-            <div class="field"><label>baseline_window_sec</label><input name="displacement_baseline_window_sec" value="{{ form.displacement_baseline_window_sec }}" /></div>
-            <div class="field"><label>kinematics_window(奇数>=3)</label><input name="displacement_kinematics_window" value="{{ form.displacement_kinematics_window }}" /></div>
-            <div class="field"><label>kinematics_poly(1<=poly&lt;window)</label><input name="displacement_kinematics_poly" value="{{ form.displacement_kinematics_poly }}" /></div>
-            <div class="field"><label>threshold_pa_override(可空)</label><input name="displacement_threshold_pa_override" value="{{ form.displacement_threshold_pa_override }}" /></div>
-            <div class="field"><label>threshold_move_override(可空)</label><input name="displacement_threshold_move_override" value="{{ form.displacement_threshold_move_override }}" /></div>
-            <div class="field"><label>min_duration_sec</label><input name="displacement_min_duration_sec" value="{{ form.displacement_min_duration_sec }}" /></div>
-            <div class="field"><label>max_duration_sec</label><input name="displacement_max_duration_sec" value="{{ form.displacement_max_duration_sec }}" /></div>
-            <div class="field"><label>merge_gap_sec</label><input name="displacement_merge_gap_sec" value="{{ form.displacement_merge_gap_sec }}" /></div>
-          </article>
-
-          <article class="module-card">
-            <h3>转动</h3>
-            <div class="field"><label>left_shoulder_idx</label><input name="rotation_left_shoulder_idx" value="{{ form.rotation_left_shoulder_idx }}" /></div>
-            <div class="field"><label>right_shoulder_idx</label><input name="rotation_right_shoulder_idx" value="{{ form.rotation_right_shoulder_idx }}" /></div>
-            <div class="field"><label>smooth_window(奇数>=3)</label><input name="rotation_smooth_window" value="{{ form.rotation_smooth_window }}" /></div>
-            <div class="field"><label>smooth_poly(1<=poly&lt;window)</label><input name="rotation_smooth_poly" value="{{ form.rotation_smooth_poly }}" /></div>
-            <div class="field"><label>threshold_override(可空)</label><input name="rotation_threshold_override" value="{{ form.rotation_threshold_override }}" /></div>
-            <div class="field"><label>min_duration_sec</label><input name="rotation_min_duration_sec" value="{{ form.rotation_min_duration_sec }}" /></div>
-            <div class="field"><label>max_duration_sec</label><input name="rotation_max_duration_sec" value="{{ form.rotation_max_duration_sec }}" /></div>
-            <div class="field"><label>merge_gap_sec</label><input name="rotation_merge_gap_sec" value="{{ form.rotation_merge_gap_sec }}" /></div>
-          </article>
+        <div class="modules-row">
+          {% set module_meta = [
+            ('tilt',         '倾斜',  'Tilt',         '头颈侧倾角'),
+            ('shrug',        '耸肩',  'Shrug',        '肩部上抬'),
+            ('displacement', '位移',  'Displacement', '横向偏移'),
+            ('rotation',     '转动',  'Rotation',     '躯干旋转'),
+          ] %}
+          {% for key, zh, en, desc in module_meta %}
+          <label class="module-chip {% if key in form.modules %}selected{% endif %}"
+                 id="chip-{{ key }}" onclick="toggleChip(this)">
+            <input type="checkbox" name="modules" value="{{ key }}"
+                   {% if key in form.modules %}checked{% endif %}>
+            <span class="chip-indicator"></span>
+            <span>
+              <span class="chip-label">{{ zh }}</span>
+              <span class="chip-meta"> / {{ en }} · {{ desc }}</span>
+            </span>
+          </label>
+          {% endfor %}
         </div>
-      </section>
+      </div><!-- /video-hero -->
 
-      <div class="actions">
-        <button class="btn" id="btnStart" type="submit">开始综合分析</button>
+      <!-- TAB TOOLBAR -->
+      <div class="tab-toolbar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-recog')">⚙ 识别配置</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-tilt')">◤ 倾斜</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-shrug')">▲ 耸肩</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-disp')">⟷ 位移</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-rot')">↻ 转动</button>
       </div>
-    </form>
 
-    <section class="panel hidden" id="resultPanel">
-      <h2>运行结果</h2>
-      <div class="result-grid" id="resultMeta"></div>
+      <div class="content-area">
 
-      <h3>层级CSV文件</h3>
-      <div class="list-grid" id="layerCsvList"></div>
+        <!-- ── TAB: 识别配置 ── -->
+        <div id="tab-recog" class="fade-in">
+          <div class="info-banner warn">
+            <span class="info-banner-icon">⚠</span>
+            <div>
+              <strong style="color:var(--amber)">服务端本地配置：</strong>
+              Python 路径与 Pose2D 别名等参数需要在<strong>运行此服务的机器</strong>上配置正确的识别环境（如 MMPose / RTMPose）才能生效。
+              如您直接通过浏览器访问远程服务，请联系管理员确认服务端环境已就绪。
+            </div>
+          </div>
+          <div class="section-header">
+            <span class="section-title">Body Recognition 参数</span><div class="section-line"></div>
+          </div>
+          <div class="param-card">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot cyan"></span>识别器主配置</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid-wide">
+                <div class="field-group">
+                  <div class="field-label">Python 可执行路径</div>
+                  <input type="text" name="rec_python" value="{{ form.rec_python }}" placeholder="e.g. /usr/bin/python3"/>
+                  <div class="field-hint">服务器上运行识别脚本所用的 Python 解释器完整路径，需在服务端机器上预先配置</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">Pose2D 别名</div>
+                  <input type="text" name="rec_pose2d" value="{{ form.rec_pose2d }}" placeholder="e.g. rtmo"/>
+                  <div class="field-hint">传递给 body_recognition_runner.py 的 --pose2d 参数，需与服务端已安装的模型别名一致</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">Batch Size</div>
+                  <input type="number" name="rec_batch_size" value="{{ form.rec_batch_size }}" min="1"/>
+                  <div class="field-hint">每批推理帧数，根据 GPU 显存酌情调整</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">Score 阈值</div>
+                  <input type="number" name="rec_score_thresh" value="{{ form.rec_score_thresh }}" step="0.01" min="0" max="1"/>
+                  <div class="field-hint">最优实例筛选分数阈值（0~1）</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">JSON 来源</div>
+                  <select name="rec_json_source">
+                    <option value="tonly" {% if form.rec_json_source=='tonly' %}selected{% endif %}>tonly — 过滤后的单人结果（推荐）</option>
+                    <option value="raw"   {% if form.rec_json_source=='raw'   %}selected{% endif %}>raw — 原始多人预测结果</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-12">
+                <label class="toggle-row">
+                  <div class="toggle-wrap">
+                    <input type="checkbox" name="rec_save_vis" {% if form.rec_save_vis %}checked{% endif %}>
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </div>
+                  <span class="toggle-label">保存识别可视化视频（会增加处理时间与磁盘占用）</span>
+                </label>
+                <label class="toggle-row">
+                  <div class="toggle-wrap">
+                    <input type="checkbox" name="save_plots" {% if form.save_plots %}checked{% endif %}>
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </div>
+                  <span class="toggle-label">保存各模块分析图表</span>
+                </label>
+                <label class="toggle-row">
+                  <div class="toggle-wrap">
+                    <input type="checkbox" name="parallel" {% if form.parallel %}checked{% endif %}>
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                  </div>
+                  <span class="toggle-label">并行执行各分析模块（ProcessPoolExecutor 多核加速）</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-recog -->
 
-      <h3>模块结果</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>模块</th>
-            <th>状态</th>
-            <th>事件数</th>
-            <th>原始CSV</th>
-            <th>输出目录</th>
-            <th>耗时(秒)</th>
-          </tr>
-        </thead>
-        <tbody id="moduleResultBody"></tbody>
-      </table>
+        <!-- ── TAB: 倾斜 ── -->
+        <div id="tab-tilt" style="display:none" class="fade-in">
+          <div class="section-header">
+            <span class="section-title">倾斜 · Tilt 参数</span><div class="section-line"></div>
+          </div>
+          <div class="param-card">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot cyan"></span>平滑滤波</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">平滑窗口</div>
+                  <input type="number" name="tilt_smooth_window" value="{{ form.tilt_smooth_window }}" min="3" step="2"/>
+                  <div class="field-hint">奇数 ≥ 3，越大越平滑但延迟越高</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">平滑多项式阶数</div>
+                  <input type="number" name="tilt_smooth_poly" value="{{ form.tilt_smooth_poly }}" min="1"/>
+                  <div class="field-hint">1 ≤ poly &lt; window</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">异常跳变阈值 (°/帧)</div>
+                  <input type="number" name="tilt_outlier_diff_threshold" value="{{ form.tilt_outlier_diff_threshold }}" min="0"/>
+                  <div class="field-hint">0 = 关闭异常点过滤</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="param-card mt-12">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot cyan"></span>事件检测</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">阈值覆盖 (°)</div>
+                  <input type="text" name="tilt_threshold_override" value="{{ form.tilt_threshold_override }}" placeholder="留空 = 自动推荐"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最短持续 (s)</div>
+                  <input type="number" name="tilt_min_duration_sec" value="{{ form.tilt_min_duration_sec }}" min="0" step="0.01"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最长持续 (s)</div>
+                  <input type="number" name="tilt_max_duration_sec" value="{{ form.tilt_max_duration_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">0 = 不限制</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">合并间隔 (s)</div>
+                  <input type="number" name="tilt_merge_gap_sec" value="{{ form.tilt_merge_gap_sec }}" min="0" step="0.01"/>
+                  <div class="field-hint">间隔小于此值的事件合并</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-tilt -->
 
-      <h3>完整summary</h3>
-      <pre id="summaryPre"></pre>
+        <!-- ── TAB: 耸肩 ── -->
+        <div id="tab-shrug" style="display:none" class="fade-in">
+          <div class="section-header">
+            <span class="section-title">耸肩 · Shrug 参数</span><div class="section-line"></div>
+          </div>
+          <div class="param-card">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot green"></span>平滑与基线</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">Y 轴平滑窗口</div>
+                  <input type="number" name="shrug_smooth_window" value="{{ form.shrug_smooth_window }}" min="3" step="2"/>
+                  <div class="field-hint">奇数 ≥ 3</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">Y 轴平滑多项式</div>
+                  <input type="number" name="shrug_smooth_poly" value="{{ form.shrug_smooth_poly }}" min="1"/>
+                  <div class="field-hint">1 ≤ poly &lt; window</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">基线窗口 (s)</div>
+                  <input type="number" name="shrug_baseline_window_sec" value="{{ form.shrug_baseline_window_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">估算静止肩高的时间窗口</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="param-card mt-12">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot green"></span>事件检测</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">阈值覆盖 (px)</div>
+                  <input type="text" name="shrug_threshold_override" value="{{ form.shrug_threshold_override }}" placeholder="留空 = 自动"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最短持续 (s)</div>
+                  <input type="number" name="shrug_min_duration_sec" value="{{ form.shrug_min_duration_sec }}" min="0" step="0.01"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最长持续 (s)</div>
+                  <input type="number" name="shrug_max_duration_sec" value="{{ form.shrug_max_duration_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">0 = 不限制</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">合并间隔 (s)</div>
+                  <input type="number" name="shrug_merge_gap_sec" value="{{ form.shrug_merge_gap_sec }}" min="0" step="0.01"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-shrug -->
+
+        <!-- ── TAB: 位移 ── -->
+        <div id="tab-disp" style="display:none" class="fade-in">
+          <div class="section-header">
+            <span class="section-title">位移 · Displacement 参数</span><div class="section-line"></div>
+          </div>
+          <div class="param-card">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot amber"></span>位置平滑与基线</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">位置平滑窗口</div>
+                  <input type="number" name="displacement_smooth_window" value="{{ form.displacement_smooth_window }}" min="3" step="2"/>
+                  <div class="field-hint">奇数 ≥ 3</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">位置平滑多项式</div>
+                  <input type="number" name="displacement_smooth_poly" value="{{ form.displacement_smooth_poly }}" min="1"/>
+                  <div class="field-hint">1 ≤ poly &lt; window</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">基线窗口 (s)</div>
+                  <input type="number" name="displacement_baseline_window_sec" value="{{ form.displacement_baseline_window_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">估算初始静止位置的时间范围</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="param-card mt-12">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot amber"></span>运动学滤波（速度/加速度）</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">运动学窗口</div>
+                  <input type="number" name="displacement_kinematics_window" value="{{ form.displacement_kinematics_window }}" min="3" step="2"/>
+                  <div class="field-hint">Savitzky-Golay 微分滤波窗口，奇数 ≥ 3</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">运动学多项式</div>
+                  <input type="number" name="displacement_kinematics_poly" value="{{ form.displacement_kinematics_poly }}" min="1"/>
+                  <div class="field-hint">1 ≤ poly &lt; window</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="param-card mt-12">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot amber"></span>阈值与事件</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">PA 阈值覆盖 (px)</div>
+                  <input type="text" name="displacement_threshold_pa_override" value="{{ form.displacement_threshold_pa_override }}" placeholder="留空 = 自动"/>
+                  <div class="field-hint">位移幅度（Peak Amplitude）检测阈值</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">移动阈值覆盖 (px)</div>
+                  <input type="text" name="displacement_threshold_move_override" value="{{ form.displacement_threshold_move_override }}" placeholder="留空 = 自动"/>
+                  <div class="field-hint">持续移动事件触发阈值</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最短持续 (s)</div>
+                  <input type="number" name="displacement_min_duration_sec" value="{{ form.displacement_min_duration_sec }}" min="0" step="0.01"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最长持续 (s)</div>
+                  <input type="number" name="displacement_max_duration_sec" value="{{ form.displacement_max_duration_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">0 = 不限制</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">合并间隔 (s)</div>
+                  <input type="number" name="displacement_merge_gap_sec" value="{{ form.displacement_merge_gap_sec }}" min="0" step="0.01"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-disp -->
+
+        <!-- ── TAB: 转动 ── -->
+        <div id="tab-rot" style="display:none" class="fade-in">
+          <div class="section-header">
+            <span class="section-title">转动 · Rotation 参数</span><div class="section-line"></div>
+          </div>
+
+          <!-- COCO KP MAP -->
+          <div class="kp-map-wrap">
+            <div class="kp-map-title">COCO 17 关键点对照表 · 点击选择左肩 / 右肩索引</div>
+            <div class="kp-grid" id="kpGrid"><!-- filled by JS --></div>
+            <div class="kp-legend">
+              <div class="kp-legend-item">
+                <div class="kp-legend-dot" style="background:var(--cyan)"></div>
+                <span>左肩 left_shoulder_idx</span>
+              </div>
+              <div class="kp-legend-item">
+                <div class="kp-legend-dot" style="background:var(--green)"></div>
+                <span>右肩 right_shoulder_idx</span>
+              </div>
+              <div class="kp-hint">点击第一次 = 设左肩，再点 = 设右肩，循环切换</div>
+            </div>
+            <div class="kp-idx-row">
+              <div class="field-group">
+                <div class="field-label" style="color:var(--cyan)">左肩索引 (left_shoulder_idx)</div>
+                <input type="number" id="rotLeftIdx" name="rotation_left_shoulder_idx"
+                       value="{{ form.rotation_left_shoulder_idx }}" min="0" max="16"
+                       oninput="syncKpHighlight()"/>
+                <div class="field-hint">默认 <strong>5</strong> = left_shoulder（COCO 标准关键点）</div>
+              </div>
+              <div class="field-group">
+                <div class="field-label" style="color:var(--green)">右肩索引 (right_shoulder_idx)</div>
+                <input type="number" id="rotRightIdx" name="rotation_right_shoulder_idx"
+                       value="{{ form.rotation_right_shoulder_idx }}" min="0" max="16"
+                       oninput="syncKpHighlight()"/>
+                <div class="field-hint">默认 <strong>6</strong> = right_shoulder（COCO 标准关键点）</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="param-card">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot red"></span>平滑滤波</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">平滑窗口</div>
+                  <input type="number" name="rotation_smooth_window" value="{{ form.rotation_smooth_window }}" min="3" step="2"/>
+                  <div class="field-hint">奇数 ≥ 3</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">平滑多项式</div>
+                  <input type="number" name="rotation_smooth_poly" value="{{ form.rotation_smooth_poly }}" min="1"/>
+                  <div class="field-hint">1 ≤ poly &lt; window</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="param-card mt-12">
+            <div class="param-card-header" onclick="toggleCard(this)">
+              <div class="param-card-title"><span class="card-dot red"></span>事件检测</div>
+              <span class="param-card-toggle">▾</span>
+            </div>
+            <div class="param-card-body">
+              <div class="params-grid">
+                <div class="field-group">
+                  <div class="field-label">阈值覆盖 (°/帧)</div>
+                  <input type="text" name="rotation_threshold_override" value="{{ form.rotation_threshold_override }}" placeholder="留空 = 自动"/>
+                  <div class="field-hint">转动角速度事件触发阈值</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最短持续 (s)</div>
+                  <input type="number" name="rotation_min_duration_sec" value="{{ form.rotation_min_duration_sec }}" min="0" step="0.01"/>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">最长持续 (s)</div>
+                  <input type="number" name="rotation_max_duration_sec" value="{{ form.rotation_max_duration_sec }}" min="0" step="0.1"/>
+                  <div class="field-hint">0 = 不限制</div>
+                </div>
+                <div class="field-group">
+                  <div class="field-label">合并间隔 (s)</div>
+                  <input type="number" name="rotation_merge_gap_sec" value="{{ form.rotation_merge_gap_sec }}" min="0" step="0.01"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-rot -->
+
+      </div><!-- /content-area -->
+
+      <!-- RUN FOOTER -->
+      <div class="run-footer">
+        <div class="run-footer-info" id="footerInfo">配置完成后点击启动分析</div>
+        <button class="btn btn-ghost btn-sm" onclick="window.location.reload()">↺ 重置</button>
+        <button class="btn btn-accent btn-lg" id="submitBtn" onclick="submitJob()">▶ 启动分析</button>
+      </div>
+
+    </section><!-- /video-page -->
+
+    <!-- ╔══════════════╗
+         ║  PAGE 2 POSE ║
+         ╚══════════════╝ -->
+    <section class="page" id="pose-page">
+      <div style="padding:24px 28px 20px;background:linear-gradient(180deg,#0a1628,var(--bg-deep));border-bottom:1px solid var(--border)">
+        <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div>POSE DETECTION</div>
+        <h1 class="hero-title">姿态检测</h1>
+        <p class="hero-subtitle">任务运行中的姿态检测阶段状态与配置总览</p>
+      </div>
+      <div class="content-area" id="posePageContent">
+        <div class="empty-state"><div class="empty-icon">◈</div>
+          <div class="empty-text">请先在<strong>视频识别</strong>页面启动任务，完成后此处将展示姿态检测详情。</div>
+        </div>
+      </div>
     </section>
+
+    <!-- ╔═════════════════╗
+         ║  PAGE 3 KEYPOINT ║
+         ╚═════════════════╝ -->
+    <section class="page" id="keypoint-page">
+      <div style="padding:24px 28px 20px;background:linear-gradient(180deg,#0a1628,var(--bg-deep));border-bottom:1px solid var(--border)">
+        <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div>KEYPOINT VISUALIZATION</div>
+        <h1 class="hero-title">关键点可视化</h1>
+        <p class="hero-subtitle">骨骼关键点坐标、置信度与帧序列可视化</p>
+      </div>
+      <div class="content-area" id="keypointContent">
+        <div class="empty-state"><div class="empty-icon">⊕</div>
+          <div class="empty-text">任务完成后，关键点时间序列数据将在此处展示。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ╔═══════════════╗
+         ║  PAGE 4 RESULT ║
+         ╚═══════════════╝ -->
+    <section class="page" id="result-page">
+      <div style="padding:24px 28px 20px;background:linear-gradient(180deg,#0a1628,var(--bg-deep));border-bottom:1px solid var(--border)">
+        <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div>RESULT ANALYSIS</div>
+        <h1 class="hero-title">结果分析</h1>
+        <p class="hero-subtitle">各模块事件检测结果、统计摘要与输出路径</p>
+      </div>
+      <div class="content-area" id="resultContent">
+        <div class="empty-state"><div class="empty-icon">◎</div>
+          <div class="empty-text">运行任务后，四模块的分析结果将在此处汇总展示。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ╔══════════════════╗
+         ║  PAGE 5 HISTORY  ║
+         ╚══════════════════╝ -->
+    <section class="page" id="history-page">
+      <div style="padding:24px 28px 20px;background:linear-gradient(180deg,#0a1628,var(--bg-deep));border-bottom:1px solid var(--border)">
+        <div class="hero-eyebrow"><div class="hero-eyebrow-line"></div>HISTORY</div>
+        <h1 class="hero-title">历史记录</h1>
+        <p class="hero-subtitle">本次会话中的所有分析任务记录</p>
+      </div>
+      <div class="content-area">
+        <div class="section-header">
+          <span class="section-title">任务列表</span>
+          <div class="section-line"></div>
+          <button class="btn btn-ghost btn-sm" onclick="clearHistory()">清除</button>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="empty-state"><div class="empty-icon">⊞</div><div class="empty-text">暂无历史记录。</div></div>
+        </div>
+      </div>
+    </section>
+
   </main>
+</div>
+
+<!-- ── FLOATING JOB MONITOR ── -->
+<div id="jobMonitorWrap" style="display:none;position:fixed;bottom:20px;right:24px;width:420px;z-index:200;">
+  <div class="job-panel fade-in">
+    <div class="job-panel-header">
+      <div class="job-id-display">任务 <span id="monitorJobId">—</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="job-status-badge badge-queued" id="monitorBadge">QUEUED</span>
+        <button class="btn btn-ghost btn-sm" onclick="closeMonitor()" style="padding:4px 8px">✕</button>
+      </div>
+    </div>
+    <div class="job-body">
+      <div class="job-meta-row">
+        <div class="job-meta-item"><div class="job-meta-label">进度</div><div class="job-meta-value" id="monitorProgress">0%</div></div>
+        <div class="job-meta-item"><div class="job-meta-label">耗时</div><div class="job-meta-value" id="monitorElapsed">0s</div></div>
+        <div class="job-meta-item"><div class="job-meta-label">剩余预计</div><div class="job-meta-value" id="monitorEta">—</div></div>
+        <div class="job-meta-item"><div class="job-meta-label">阶段</div><div class="job-meta-value" id="monitorStage">—</div></div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="monitorFill"></div>
+      </div>
+      <div class="job-message-area">
+        <span class="msg-prefix">MSG</span>
+        <span id="monitorMsg">等待启动…</span>
+      </div>
+      <div class="log-box" id="monitorLog">
+        <div class="log-line" style="color:var(--text-muted)">等待任务日志…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SUBMIT OVERLAY ── -->
+<div id="submitOverlay">
+  <div class="overlay-card">
+    <div class="overlay-spinner"></div>
+    <div class="overlay-text">正在提交任务…</div>
+  </div>
+</div>
 
 <script>
-(() => {
-  const endpoints = {
-    createJob: "{{ url_for('create_job') }}",
-    getJobBase: "/api/jobs/",
-    previewCover: "{{ url_for('preview_cover') }}",
-    previewVideo: "{{ url_for('preview_video') }}",
+// ─────────────────────────────────────────────────────────
+// COCO 17 Keypoints
+// ─────────────────────────────────────────────────────────
+const COCO_KPS = [
+  {i:0,  en:'nose',           zh:'鼻尖'},
+  {i:1,  en:'left_eye',       zh:'左眼'},
+  {i:2,  en:'right_eye',      zh:'右眼'},
+  {i:3,  en:'left_ear',       zh:'左耳'},
+  {i:4,  en:'right_ear',      zh:'右耳'},
+  {i:5,  en:'left_shoulder',  zh:'左肩 ★'},
+  {i:6,  en:'right_shoulder', zh:'右肩 ★'},
+  {i:7,  en:'left_elbow',     zh:'左肘'},
+  {i:8,  en:'right_elbow',    zh:'右肘'},
+  {i:9,  en:'left_wrist',     zh:'左腕'},
+  {i:10, en:'right_wrist',    zh:'右腕'},
+  {i:11, en:'left_hip',       zh:'左髋'},
+  {i:12, en:'right_hip',      zh:'右髋'},
+  {i:13, en:'left_knee',      zh:'左膝'},
+  {i:14, en:'right_knee',     zh:'右膝'},
+  {i:15, en:'left_ankle',     zh:'左踝'},
+  {i:16, en:'right_ankle',    zh:'右踝'},
+];
+
+function buildKpGrid() {
+  const grid = document.getElementById('kpGrid');
+  if (!grid) return;
+  grid.innerHTML = COCO_KPS.map(k => `
+    <div class="kp-item" id="kp-${k.i}" onclick="kpClick(${k.i})">
+      <span class="kp-num">${k.i}</span>
+      <span class="kp-name-wrap">
+        <span class="kp-zh">${k.zh}</span>
+        <span class="kp-en">${k.en}</span>
+      </span>
+      <span class="kp-tag" id="kp-tag-${k.i}"></span>
+    </div>`).join('');
+  syncKpHighlight();
+}
+
+let kpState = 0; // 0=next click sets left, 1=next click sets right
+function kpClick(idx) {
+  const L = document.getElementById('rotLeftIdx');
+  const R = document.getElementById('rotRightIdx');
+  if (!L || !R) return;
+  if (kpState === 0) { L.value = idx; kpState = 1; }
+  else               { R.value = idx; kpState = 0; }
+  syncKpHighlight();
+}
+
+function syncKpHighlight() {
+  const li = parseInt(document.getElementById('rotLeftIdx')?.value ?? '5');
+  const ri = parseInt(document.getElementById('rotRightIdx')?.value ?? '6');
+  COCO_KPS.forEach(k => {
+    const el  = document.getElementById(`kp-${k.i}`);
+    const tag = document.getElementById(`kp-tag-${k.i}`);
+    if (!el || !tag) return;
+    el.classList.remove('kp-left','kp-right');
+    tag.textContent = '';
+    if (k.i === li && k.i === ri) { el.classList.add('kp-left'); tag.textContent = 'L=R'; }
+    else if (k.i === li)          { el.classList.add('kp-left'); tag.textContent = 'LEFT'; }
+    else if (k.i === ri)          { el.classList.add('kp-right'); tag.textContent = 'RIGHT'; }
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// Navigation
+// ─────────────────────────────────────────────────────────
+function switchPage(navEl, pageId) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  navEl.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById(pageId);
+  if (page) page.classList.add('active');
+}
+
+function switchTab(tabEl, tabId) {
+  ['tab-recog','tab-tilt','tab-shrug','tab-disp','tab-rot'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  tabEl.classList.add('active');
+  const panel = document.getElementById(tabId);
+  if (panel) { panel.style.display = 'block'; panel.classList.add('fade-in'); }
+}
+
+function toggleCard(hdr) {
+  const body = hdr.nextElementSibling;
+  const tog  = hdr.querySelector('.param-card-toggle');
+  const col  = body.classList.toggle('collapsed');
+  if (tog) tog.classList.toggle('collapsed', col);
+}
+
+function toggleChip(chipEl) {
+  const cb = chipEl.querySelector('input[type="checkbox"]');
+  cb.checked = !cb.checked;
+  chipEl.classList.toggle('selected', cb.checked);
+}
+
+// ─────────────────────────────────────────────────────────
+// Video Input Mode
+// ─────────────────────────────────────────────────────────
+function switchVideoInput(tabEl, panelId) {
+  document.querySelectorAll('.vinput-tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  ['vi-path','vi-upload'].forEach(id => {
+    document.getElementById(id).style.display = (id === panelId) ? 'block' : 'none';
+  });
+}
+
+// ─────────────────────────────────────────────────────────
+// Preview
+// ─────────────────────────────────────────────────────────
+let _prevTimer = null;
+function onVideoPathChange(v) {
+  clearTimeout(_prevTimer);
+  _prevTimer = setTimeout(() => { if (v.trim()) loadPreviewCover(v.trim()); }, 900);
+}
+function triggerPreview() {
+  const v = document.getElementById('input_path').value.trim();
+  if (v) loadPreviewCover(v);
+}
+function loadPreviewCover(path) {
+  const img  = document.getElementById('previewCover');
+  const ph   = document.getElementById('previewPlaceholder');
+  const ov   = document.getElementById('previewOverlay');
+  img.style.display = 'none'; ph.style.display = 'flex';
+  ph.querySelector('div:last-child').textContent = '加载中…';
+  img.onload  = () => { ph.style.display='none'; img.style.display='block'; ov.style.display='block'; ov.textContent = path.split(/[/\\]/).pop(); };
+  img.onerror = () => { ph.querySelector('div:last-child').textContent = '预览失败\n请确认路径正确'; };
+  img.src = '/api/preview-cover?path=' + encodeURIComponent(path) + '&_=' + Date.now();
+}
+
+// ─────────────────────────────────────────────────────────
+// File Upload
+// ─────────────────────────────────────────────────────────
+function handleFileSelect(input) {
+  if (input.files && input.files[0]) uploadFile(input.files[0]);
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadFile(file);
+}
+function uploadFile(file) {
+  const nameEl   = document.getElementById('uploadFileName');
+  const wrapEl   = document.getElementById('uploadProgressWrap');
+  const fillEl   = document.getElementById('uploadFill');
+  const submitBtn = document.getElementById('submitBtn');
+
+  nameEl.textContent = '正在上传：' + file.name;
+  nameEl.style.display = 'block';
+  nameEl.style.color = 'var(--cyan)';
+  wrapEl.style.display = 'block';
+  fillEl.style.width = '4%';
+  fillEl.style.background = '';
+  submitBtn.disabled = true;
+
+  const fd = new FormData();
+  fd.append('file', file);
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/upload-video');
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) fillEl.style.width = Math.round(e.loaded/e.total*100) + '%';
   };
-
-  const form = document.getElementById("pipelineForm");
-  const btnStart = document.getElementById("btnStart");
-  const inputPath = document.getElementById("input_path");
-  const progressFill = document.getElementById("overallProgressFill");
-  const progressText = document.getElementById("progressText");
-  const elapsedText = document.getElementById("elapsedText");
-  const etaText = document.getElementById("etaText");
-  const runtimeErrorPanel = document.getElementById("runtimeErrorPanel");
-  const runtimeErrorText = document.getElementById("runtimeErrorText");
-  const resultPanel = document.getElementById("resultPanel");
-  const resultMeta = document.getElementById("resultMeta");
-  const layerCsvList = document.getElementById("layerCsvList");
-  const moduleResultBody = document.getElementById("moduleResultBody");
-  const summaryPre = document.getElementById("summaryPre");
-  const coverImg = document.getElementById("coverPreviewImg");
-  const fullVideo = document.getElementById("fullVideoPreview");
-  const emptyPreview = document.getElementById("emptyPreview");
-  const previewHint = document.getElementById("previewHint");
-  const btnPreviewCover = document.getElementById("btnPreviewCover");
-  const btnLoadFullVideo = document.getElementById("btnLoadFullVideo");
-
-  let activeJobId = "";
-  let pollTimer = null;
-
-  function escapeHtml(v) {
-    return String(v ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
-
-  function formatSec(v) {
-    if (v === null || v === undefined || Number.isNaN(Number(v))) return "--";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "--";
-    if (n < 60) return `${n.toFixed(1)}s`;
-    const m = Math.floor(n / 60);
-    const s = n % 60;
-    return `${m}m ${s.toFixed(0)}s`;
-  }
-
-  function setStageItem(stage, state) {
-    const el = document.querySelector(`.stage-item[data-stage="${stage}"]`);
-    if (!el) return;
-    el.classList.remove("pending", "active", "done", "error");
-    el.classList.add(state);
-  }
-
-  function setLinkDone(linkKey, done) {
-    const el = document.querySelector(`.stage-link[data-link="${linkKey}"]`);
-    if (!el) return;
-    if (done) el.classList.add("done");
-    else el.classList.remove("done");
-  }
-
-  function applyStageState(status, stage) {
-    setStageItem("prepare", "pending");
-    setStageItem("recognition", "pending");
-    setStageItem("processing", "pending");
-    setLinkDone("prepare-recognition", false);
-    setLinkDone("recognition-processing", false);
-
-    if (status === "queued") {
-      setStageItem("prepare", "active");
-      return;
+  xhr.onload = () => {
+    submitBtn.disabled = false;
+    let data; try { data = JSON.parse(xhr.responseText); } catch(ex) { data={ok:false,error:'响应解析失败'}; }
+    if (data.ok) {
+      fillEl.style.width = '100%';
+      nameEl.textContent = '✓ 上传成功：' + data.original_name;
+      nameEl.style.color = 'var(--green)';
+      document.getElementById('input_path').value = data.path;
+      loadPreviewCover(data.path);
+      document.getElementById('footerInfo').textContent = '文件已上传 · 路径：' + data.path;
+    } else {
+      fillEl.style.background = 'var(--red)';
+      nameEl.textContent = '✗ 上传失败：' + (data.error||'未知错误');
+      nameEl.style.color = 'var(--red)';
     }
+  };
+  xhr.onerror = () => { submitBtn.disabled = false; nameEl.textContent = '✗ 网络错误'; nameEl.style.color = 'var(--red)'; };
+  xhr.send(fd);
+}
 
-    if (status === "running") {
-      if (stage === "prepare") {
-        setStageItem("prepare", "active");
-      } else if (stage === "recognition") {
-        setStageItem("prepare", "done");
-        setStageItem("recognition", "active");
-        setLinkDone("prepare-recognition", true);
-      } else if (stage === "processing") {
-        setStageItem("prepare", "done");
-        setStageItem("recognition", "done");
-        setStageItem("processing", "active");
-        setLinkDone("prepare-recognition", true);
-        setLinkDone("recognition-processing", true);
-      } else {
-        setStageItem("prepare", "active");
-      }
-      return;
-    }
+// ─────────────────────────────────────────────────────────
+// Submit
+// ─────────────────────────────────────────────────────────
+let currentJobId = null, pollTimer = null, jobHistory = [];
 
-    if (status === "completed") {
-      setStageItem("prepare", "done");
-      setStageItem("recognition", "done");
-      setStageItem("processing", "done");
-      setLinkDone("prepare-recognition", true);
-      setLinkDone("recognition-processing", true);
-      return;
-    }
+function submitJob() {
+  document.getElementById('submitOverlay').classList.add('visible');
+  document.getElementById('submitBtn').disabled = true;
 
-    if (status === "error") {
-      if (stage === "recognition") {
-        setStageItem("prepare", "done");
-        setStageItem("recognition", "error");
-        setLinkDone("prepare-recognition", true);
-      } else if (stage === "processing") {
-        setStageItem("prepare", "done");
-        setStageItem("recognition", "done");
-        setStageItem("processing", "error");
-        setLinkDone("prepare-recognition", true);
-        setLinkDone("recognition-processing", true);
-      } else {
-        setStageItem("prepare", "error");
-      }
-    }
-  }
-
-  function showRuntimeError(text) {
-    runtimeErrorText.textContent = text || "未知错误";
-    runtimeErrorPanel.classList.remove("hidden");
-  }
-
-  function hideRuntimeError() {
-    runtimeErrorText.textContent = "";
-    runtimeErrorPanel.classList.add("hidden");
-  }
-
-  function resetResultPanel() {
-    resultPanel.classList.add("hidden");
-    resultMeta.innerHTML = "";
-    layerCsvList.innerHTML = "";
-    moduleResultBody.innerHTML = "";
-    summaryPre.textContent = "";
-  }
-
-  function updateProgress(data) {
-    const progress = Math.max(0, Math.min(100, Number(data.progress || 0)));
-    progressFill.style.width = `${progress.toFixed(1)}%`;
-    progressText.textContent = data.message || "运行中";
-    elapsedText.textContent = `已耗时: ${formatSec(data.elapsed_sec)}`;
-    etaText.textContent = `预计剩余: ${formatSec(data.eta_sec)}`;
-    applyStageState(data.status, data.stage);
-  }
-
-  function renderSummary(summary) {
-    if (!summary) return;
-    resultPanel.classList.remove("hidden");
-
-    const timing = summary.timing || {};
-    const recognition = summary.recognition || {};
-
-    const infMsg = recognition.inference_message
-      ? `<div class="hint success">${escapeHtml(recognition.inference_message)}</div>`
-      : "";
-
-    resultMeta.innerHTML = `
-      <div>
-        <p><strong>summary_json:</strong> <code>${escapeHtml(summary.summary_json || "")}</code></p>
-        <p><strong>层级CSV目录:</strong> <code>${escapeHtml(summary.layer_csv_dir || "")}</code></p>
-        ${infMsg}
-        <p><strong>raw_json:</strong> <code>${escapeHtml(recognition.raw_json_path || "")}</code></p>
-        <p><strong>tonly_json:</strong> <code>${escapeHtml(recognition.tonly_json_path || "")}</code></p>
-      </div>
-      <div>
-        <p><strong>总耗时:</strong> ${formatSec(timing.total_elapsed_sec)}</p>
-        <p><strong>识别耗时:</strong> ${formatSec(timing.recognition_elapsed_sec)}</p>
-        <p><strong>处理耗时:</strong> ${formatSec(timing.processing_elapsed_sec)}</p>
-        <p><strong>层级CSV导出耗时:</strong> ${formatSec(timing.csv_export_elapsed_sec)}</p>
-      </div>
-    `;
-
-    const csvFiles = summary.layer_csv_files || {};
-    const csvStatus = summary.layer_csv_status || {};
-    layerCsvList.innerHTML = "";
-    ["tilt", "shrug", "displacement", "rotation"].forEach((k) => {
-      const p = csvFiles[k] || "";
-      const s = csvStatus[k] || "";
-      const item = document.createElement("div");
-      item.className = "list-item";
-      item.innerHTML = `
-        <span class="tag">${escapeHtml(k)}</span>
-        <code>${escapeHtml(p)}</code>
-        <span class="status ${escapeHtml(s)}">${escapeHtml(s)}</span>
-      `;
-      layerCsvList.appendChild(item);
-    });
-
-    const rows = summary.results || [];
-    moduleResultBody.innerHTML = "";
-    rows.forEach((r) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${escapeHtml(r.module || "")}</td>
-        <td>${escapeHtml(r.status || "")}</td>
-        <td>${escapeHtml(r.event_count ?? "")}</td>
-        <td><code>${escapeHtml(r.csv || "")}</code></td>
-        <td><code>${escapeHtml(r.output_dir || "")}</code></td>
-        <td>${formatSec(r.elapsed_sec)}</td>
-      `;
-      moduleResultBody.appendChild(tr);
-    });
-
-    summaryPre.textContent = JSON.stringify(summary, null, 2);
-  }
-
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
-  }
-
-  async function pollJob() {
-    if (!activeJobId) return;
-    try {
-      const resp = await fetch(`${endpoints.getJobBase}${encodeURIComponent(activeJobId)}`);
-      const data = await resp.json();
-      if (!resp.ok || !data.ok) {
-        throw new Error(data.error || `请求失败(${resp.status})`);
-      }
-
-      updateProgress(data);
-
-      if (data.status === "completed") {
-        stopPolling();
-        btnStart.disabled = false;
-        renderSummary(data.summary || {});
-      } else if (data.status === "error") {
-        stopPolling();
-        btnStart.disabled = false;
-        showRuntimeError(data.error || "任务失败");
-      }
-    } catch (err) {
-      stopPolling();
-      btnStart.disabled = false;
-      showRuntimeError(String(err));
-    }
-  }
-
-  async function createJob(formData) {
-    const resp = await fetch(endpoints.createJob, {
-      method: "POST",
-      body: formData,
-    });
-    const data = await resp.json();
-    if (!resp.ok || !data.ok) {
-      throw new Error(data.error || `创建任务失败(${resp.status})`);
-    }
-    return data;
-  }
-
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    hideRuntimeError();
-    resetResultPanel();
-    stopPolling();
-    activeJobId = "";
-
-    btnStart.disabled = true;
-    progressFill.style.width = "0%";
-    progressText.textContent = "准备提交任务...";
-    elapsedText.textContent = "已耗时: --";
-    etaText.textContent = "预计剩余: --";
-    applyStageState("queued", "prepare");
-
-    try {
-      const job = await createJob(new FormData(form));
-      activeJobId = job.job_id;
-      progressText.textContent = `任务已创建（${activeJobId}），正在进入识别阶段...`;
-      pollTimer = setInterval(pollJob, 1000);
-      pollJob();
-    } catch (err) {
-      btnStart.disabled = false;
-      showRuntimeError(String(err));
-      applyStageState("error", "prepare");
-    }
+  const fd = new FormData();
+  document.querySelectorAll('[name]').forEach(el => {
+    if (el.type === 'checkbox') { if (el.checked) fd.append(el.name, el.value||'on'); }
+    else fd.append(el.name, el.value);
   });
 
-  btnPreviewCover.addEventListener("click", async () => {
-    hideRuntimeError();
-    const p = inputPath.value.trim();
-    if (!p) {
-      previewHint.textContent = "请先输入视频路径。";
-      return;
-    }
+  fetch('/api/jobs', {method:'POST', body:fd})
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('submitOverlay').classList.remove('visible');
+      document.getElementById('submitBtn').disabled = false;
+      if (!data.ok) { setFooterError('提交失败：' + data.error); return; }
+      currentJobId = data.job_id;
+      startPolling(currentJobId);
+      document.getElementById('jobMonitorWrap').style.display = 'block';
+      document.getElementById('monitorJobId').textContent = currentJobId;
+      addHistory(currentJobId);
+      document.getElementById('footerInfo').textContent = '任务已提交 · ID: ' + currentJobId;
+    })
+    .catch(err => {
+      document.getElementById('submitOverlay').classList.remove('visible');
+      document.getElementById('submitBtn').disabled = false;
+      setFooterError('网络错误：' + err.message);
+    });
+}
 
-    const u = `${endpoints.previewCover}?path=${encodeURIComponent(p)}&_ts=${Date.now()}`;
-    coverImg.src = u;
-    coverImg.classList.remove("hidden");
-    emptyPreview.classList.add("hidden");
-    previewHint.textContent = "正在加载首帧...";
+document.addEventListener('submit', e => { e.preventDefault(); submitJob(); });
 
-    coverImg.onload = () => {
-      previewHint.textContent = "首帧预览已加载。";
-    };
-    coverImg.onerror = () => {
-      coverImg.classList.add("hidden");
-      emptyPreview.classList.remove("hidden");
-      previewHint.textContent = "首帧预览失败，请检查路径或编码器。";
-    };
+function setFooterError(msg) {
+  const el = document.getElementById('footerInfo');
+  el.textContent = msg; el.classList.add('error-msg');
+  setTimeout(() => el.classList.remove('error-msg'), 5000);
+}
+
+// ─────────────────────────────────────────────────────────
+// Polling
+// ─────────────────────────────────────────────────────────
+function startPolling(jobId) {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(() => pollJob(jobId), 1300);
+}
+function pollJob(jobId) {
+  fetch('/api/jobs/' + jobId).then(r=>r.json()).then(data => {
+    if (!data.ok) return;
+    updateMonitor(data);
+    if (data.status==='completed'||data.status==='error') { clearInterval(pollTimer); onJobFinished(data); }
+    updateHistoryItem(jobId, data);
+  }).catch(()=>{});
+}
+function updateMonitor(d) {
+  const pct = (d.progress||0).toFixed(1);
+  document.getElementById('monitorProgress').textContent = pct+'%';
+  document.getElementById('monitorFill').style.width = pct+'%';
+  document.getElementById('monitorElapsed').textContent = fmtSec(d.elapsed_sec);
+  document.getElementById('monitorEta').textContent = d.eta_sec!=null ? fmtSec(d.eta_sec) : '—';
+  document.getElementById('monitorStage').textContent = d.stage||'—';
+  document.getElementById('monitorMsg').textContent   = d.message||'—';
+  const badge = document.getElementById('monitorBadge');
+  const labels = {queued:'QUEUED',running:'RUNNING',completed:'DONE',error:'ERROR'};
+  badge.className = 'job-status-badge badge-'+(d.status||'queued');
+  badge.textContent = labels[d.status]||(d.status||'').toUpperCase();
+  if (d.logs&&d.logs.length) {
+    const lb = document.getElementById('monitorLog');
+    lb.innerHTML = d.logs.map(l=>`<div class="log-line">${esc(l)}</div>`).join('');
+    lb.scrollTop = lb.scrollHeight;
+  }
+}
+function onJobFinished(d) {
+  if (d.status==='completed') {
+    renderResult(d);
+    setTimeout(() => {
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(n=>n.classList.remove('active'));
+      if (navItems[3]) navItems[3].classList.add('active');
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      document.getElementById('result-page').classList.add('active');
+    }, 900);
+  }
+}
+function closeMonitor() { document.getElementById('jobMonitorWrap').style.display='none'; }
+
+// ─────────────────────────────────────────────────────────
+// Results
+// ─────────────────────────────────────────────────────────
+function renderResult(d) {
+  const s=d.summary; if(!s) return;
+  const results=s.results||[], timing=s.timing||{};
+  const ok=results.filter(r=>r.status==='ok').length, err=results.length-ok;
+  let html=`
+    <div class="section-header"><span class="section-title">任务汇总</span><div class="section-line"></div></div>
+    <div class="summary-grid">
+      <div class="summary-card"><div class="summary-card-label">总耗时</div><div class="summary-card-value">${fmtSec(timing.total_elapsed_sec)}</div><div class="summary-card-sub">识别 ${fmtSec(timing.recognition_elapsed_sec)} · 处理 ${fmtSec(timing.processing_elapsed_sec)}</div></div>
+      <div class="summary-card"><div class="summary-card-label">模块结果</div><div class="summary-card-value" style="${err>0?'color:var(--amber)':''}">${ok} / ${results.length}</div><div class="summary-card-sub">成功${err>0?' · <span style="color:var(--red)">'+err+' 失败</span>':''}</div></div>
+      <div class="summary-card"><div class="summary-card-label">FPS</div><div class="summary-card-value">${s.fps||'—'}</div><div class="summary-card-sub">置信度阈值 ${s.min_confidence||'—'}</div></div>
+      <div class="summary-card"><div class="summary-card-label">并行模式</div><div class="summary-card-value" style="font-size:14px">${s.parallel_used?'启用':'关闭'}</div><div class="summary-card-sub">${s.parallel_used?'ProcessPoolExecutor':'串行执行'}</div></div>
+    </div>
+    <div class="section-header mt-18"><span class="section-title">模块详情</span><div class="section-line"></div></div>
+  `;
+  results.forEach(r => {
+    const ok=r.status==='ok';
+    html+=`<div class="module-result-row ${ok?'result-ok':'result-err'}"><div><div class="module-result-name">${esc(r.label||r.module)}</div><div class="module-result-meta">${ok?`事件数: <strong>${r.event_count??'—'}</strong> &nbsp;·&nbsp; <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">${esc(r.output_dir||'')}</span>`:`<span style="color:var(--red)">${esc(r.error||'未知错误')}</span>`}</div></div><span class="job-status-badge ${ok?'badge-completed':'badge-error'}">${ok?'OK':'ERR'}</span></div>`;
   });
+  document.getElementById('resultContent').innerHTML=html;
+}
 
-  btnLoadFullVideo.addEventListener("click", () => {
-    const p = inputPath.value.trim();
-    if (!p) {
-      previewHint.textContent = "请先输入视频路径。";
-      return;
-    }
-    fullVideo.src = `${endpoints.previewVideo}?path=${encodeURIComponent(p)}`;
-    fullVideo.classList.remove("hidden");
-    emptyPreview.classList.add("hidden");
-    previewHint.textContent = "已加载完整视频预览。";
-  });
-})();
+// ─────────────────────────────────────────────────────────
+// History
+// ─────────────────────────────────────────────────────────
+function addHistory(jobId) {
+  jobHistory.unshift({id:jobId,status:'queued',elapsed:0,msg:'任务已创建',time:new Date().toLocaleTimeString()});
+  renderHistory();
+}
+function updateHistoryItem(jobId,d) {
+  const item=jobHistory.find(h=>h.id===jobId); if(!item) return;
+  item.status=d.status; item.elapsed=d.elapsed_sec; item.msg=d.message; renderHistory();
+}
+function renderHistory() {
+  const list=document.getElementById('historyList');
+  if(!jobHistory.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">⊞</div><div class="empty-text">暂无历史记录。</div></div>';return;}
+  const colors={queued:'var(--text-muted)',running:'var(--cyan)',completed:'var(--green)',error:'var(--red)'};
+  list.innerHTML=jobHistory.map(h=>`
+    <div class="history-item">
+      <div class="history-dot" style="background:${colors[h.status]||'var(--text-muted)'};box-shadow:0 0 6px ${colors[h.status]||'transparent'}"></div>
+      <div class="history-info"><div class="history-id">${esc(h.id)}</div><div class="history-meta">${esc(h.msg)} · ${fmtSec(h.elapsed)}</div></div>
+      <div class="history-time">${h.time}</div>
+      <span class="job-status-badge badge-${h.status}">${h.status.toUpperCase()}</span>
+    </div>`).join('');
+}
+function clearHistory() { jobHistory=[]; renderHistory(); }
+
+// ─────────────────────────────────────────────────────────
+// Utils
+// ─────────────────────────────────────────────────────────
+function fmtSec(s) {
+  if(s==null||isNaN(s)) return '—';
+  s=Math.round(s); if(s<60) return s+'s';
+  return Math.floor(s/60)+'m '+(s%60)+'s';
+}
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', buildKpGrid);
 </script>
 </body>
 </html>

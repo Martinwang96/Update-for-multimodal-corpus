@@ -1,0 +1,44 @@
+# ============================================================
+# 非言语行为分析平台 — Python 依赖
+# 安装：pip install -r requirements.txt
+# ============================================================
+
+# --- Web 框架 ---
+Flask>=2.3,<4.0
+Werkzeug>=2.3,<4.0
+
+# --- 数据处理与可视化 ---
+# 注意：numpy 必须 <2.0 以兼容 xtcocotools 的二进制 ABI
+numpy>=1.21,<2.0
+pandas>=1.5,<4.0
+scipy>=1.7,<2.0
+scikit-learn>=1.0,<2.0
+# 注意：opencv-python 必须 <5.0 以兼容 numpy 1.x
+matplotlib>=3.5,<4.0
+opencv-python>=4.5,<5.0
+
+# --- 躯体视频识别（CPU 版，已验证通过版本组合）---
+# 推荐按官方方式安装（见 README.md），而非直接 pip install：
+#   conda install pytorch torchvision cpuonly -c pytorch
+#   pip install -U openmim
+#   mim install mmengine
+#   mim install "mmcv>=2.0.1"
+#   mim install "mmpose>=1.1.0"
+#   mim install "mmdet>=3.0.0,<3.3.0"
+# 下面列出已验证通过的版本组合：
+torch>=1.8.0
+mmengine>=0.8.0
+mmcv>=2.0.1,<2.2.0
+mmpose>=1.1.0
+mmdet>=3.0.0,<3.3.0
+setuptools<81              # mmengine 需要 pkg_resources（setuptools 81+ 移除）
+xtcocotools                # mmpose 评测依赖
+
+# ============================================================
+# 外部工具（非 pip，需单独安装）
+# ============================================================
+# OpenFace（面部/头部 AU 与 pose 检测）:
+#   C++ 源码编译，参考 https://github.com/TadasBaltrusaitis/OpenFace/wiki
+#   macOS: brew install openblas opencv boost; cmake 编译；运行 download_models.sh
+#   产物：bin/FeatureExtraction（用于视频→CSV）
+# ============================================================

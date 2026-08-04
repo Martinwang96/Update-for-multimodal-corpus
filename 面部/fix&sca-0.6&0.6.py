@@ -2,26 +2,16 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-import datetime
-from matplotlib import rcParams
 import os
+from face_common import load_openface_csv, setup_matplotlib
 
-# 设置 matplotlib 使用非交互式后端
-import matplotlib
-matplotlib.use('Agg')
-from matplotlib import rcParams
-rcParams['font.sans-serif'] = ['SimHei']  # 设置为 SimHei 或其他支持中文的字体
-rcParams['axes.unicode_minus'] = False  # 防止负号显示为方块
+setup_matplotlib(backend='Agg')
 
 def load_openface_data(file_path: str) -> pd.DataFrame:
-    """读取 OpenFace CSV 数据文件，并去除所有列名前后的空格"""
-    try:
-        data = pd.read_csv(file_path, encoding='utf-8-sig')
-    except Exception as e:
-        print(f"读取 CSV 文件失败: {e}")
+    """读取 OpenFace CSV 数据文件（使用共享模块）"""
+    data = load_openface_csv(file_path)
+    if data is None:
         sys.exit(1)
-    data.columns = [col.strip() for col in data.columns]
-    print(f"数据加载完成，共 {len(data)} 行")
     print("列名列表：", list(data.columns)[:10], "...等" if len(data.columns) > 10 else "")
     return data
 

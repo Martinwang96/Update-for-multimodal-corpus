@@ -10,6 +10,8 @@ Copyright (c) 2025 by Martin Wang in Language of Sciences, Shanghai Internationa
 from pathlib import Path
 import json
 import numpy as np
+import matplotlib
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.ticker import FuncFormatter # 用于格式化时间轴
@@ -156,7 +158,7 @@ def interpolate_invalid_frames_2d(positions_2d, valid_flags, limit_gap_frames=15
     interpolated_positions[~valid_flags, :] = np.nan
     df = pd.DataFrame(interpolated_positions, columns=['x', 'y'])
     df_interpolated = df.interpolate(method='linear', axis=0, limit=limit_gap_frames, limit_direction='both', limit_area=None)
-    df_interpolated = df_interpolated.fillna(method='ffill').fillna(method='bfill')
+    df_interpolated = df_interpolated.ffill().bfill()
 
     final_nan = df_interpolated.isnull().sum().sum()
     if final_nan > 0: warnings.warn(f"警告：插值后仍有 {final_nan // 2} 帧数据未能完全填充。")
@@ -168,7 +170,7 @@ def smooth_positions_2d(positions_2d, window_length=7, poly_order=2):
     # 填充内部 NaN
     pos_df = pd.DataFrame(positions_2d, columns=['x', 'y'])
     pos_filled = pos_df.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=int(window_length*2))
-    pos_filled = pos_filled.fillna(method='ffill').fillna(method='bfill')
+    pos_filled = pos_filled.ffill().bfill()
     pos_ready = pos_filled.to_numpy()
 
     if pos_ready.shape[0] <= window_length:
@@ -205,7 +207,7 @@ def calculate_baseline_and_deviation_x(positions_x, fps, baseline_window_sec):
     x_series = pd.Series(positions_x)
     fill_limit_base = max(10, int(fps * 1.0)) if fps > 0 else 10
     x_filled = x_series.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=fill_limit_base)
-    x_filled = x_filled.fillna(method='ffill').fillna(method='bfill')
+    x_filled = x_filled.ffill().bfill()
     x_ready = x_filled.to_numpy()
 
     if np.any(np.isnan(x_ready)):
@@ -245,7 +247,7 @@ def compute_kinematics_x(positions_x, fps, smooth_window=9, smooth_poly=2):
     x_series = pd.Series(positions_x)
     fill_limit_kin = max(5, int(fps * 0.2)) if fps > 0 else 5
     x_filled = x_series.interpolate(method='linear', limit_direction='both', limit_area='inside', limit=fill_limit_kin)
-    x_filled = x_filled.fillna(method='ffill').fillna(method='bfill')
+    x_filled = x_filled.ffill().bfill()
     x_ready = x_filled.to_numpy()
 
     n_frames = len(x_ready)

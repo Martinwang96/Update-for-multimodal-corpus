@@ -24,6 +24,8 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"}
 JOBS: Dict[str, Dict[str, Any]] = {}
 JOB_LOCK = threading.Lock()
 MAX_JOB_LOG_LINES = 200
+UPLOAD_DIR = BASE / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def load_combined_module():
@@ -156,7 +158,7 @@ def build_form_defaults() -> Dict[str, Any]:
         "fps": "30.0",
         "min_confidence": "0.3",
         "save_plots": False,
-        "parallel": True,
+        "parallel": False,
         "modules": ORDER.copy(),
         "tilt_smooth_window": str(dp["tilt"]["smooth_window"]),
         "tilt_smooth_poly": str(dp["tilt"]["smooth_poly"]),
@@ -224,7 +226,7 @@ def _build_config_from_form() -> Dict[str, Any]:
         "fps": _to_float(request.form.get("fps", "30.0"), 30.0),
         "min_confidence": _to_float(request.form.get("min_confidence", "0.3"), 0.3),
         "save_plots": bool(request.form.get("save_plots")),
-        "parallel": bool(request.form.get("parallel")),
+        "parallel": False,
         "modules": modules,
         "params": {
             "tilt": {
@@ -419,6 +421,25 @@ def _run_job(job_id: str, config: Dict[str, Any]):
             job["finished_at"] = time.time()
             job["last_update"] = time.time()
             _append_log(job, f"流程失败：{type(e).__name__}: {e}")
+
+
+@APP.post("/api/upload-video")
+def upload_video():
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"ok": False, "error": "没有收到文件"}), 400
+
+    filename = f.filename
+    suffix = Path(filename).suffix.lower()
+    if suffix not in VIDEO_EXTENSIONS:
+        allowed = ", ".join(sorted(VIDEO_EXTENSIONS))
+        return jsonify({"ok": False, "error": f"不支持的格式 {suffix}，支持：{allowed}"}), 400
+
+    # Use a unique name to avoid collisions
+    safe_name = uuid.uuid4().hex[:8] + "_" + Path(filename).stem[:40] + suffix
+    save_path = UPLOAD_DIR / safe_name
+    f.save(str(save_path))
+    return jsonify({"ok": True, "path": str(save_path), "original_name": filename})
 
 
 @APP.get("/preview-video")

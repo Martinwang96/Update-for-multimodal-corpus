@@ -100,6 +100,34 @@ def nanmax0(arr: Any) -> float:
     return float(np.nanmax(a))
 
 
+def empty_module_result(
+    module_key: str,
+    output_dir: Path,
+    reason: str,
+    *,
+    threshold: Any = None,
+    csv_path: Optional[Path] = None,
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    result: Dict[str, Any] = {
+        "module": module_key,
+        "label": SPECS[module_key]["label"],
+        "status": "ok",
+        "event_count": 0,
+        "threshold": threshold,
+        "max_value": 0.0,
+        "csv": str(csv_path) if csv_path else None,
+        "threshold_plot": None,
+        "analysis_plot": None,
+        "output_dir": str(output_dir),
+        "note": reason,
+        "data_status": "insufficient",
+    }
+    if extra:
+        result.update(extra)
+    return result
+
+
 def _safe_progress_callback(progress_callback: Optional[Callable[[Dict[str, Any]], None]], event: Dict[str, Any]):
     if progress_callback is None:
         return
@@ -554,8 +582,9 @@ def run_tilt(task: Dict[str, Any]) -> Dict[str, Any]:
 
     coords, _, total_frames, valid_mask = m.load_required_keypoints_2d(jp, m.DEFAULT_REQUIRED_KP_INDICES, conf)
     min_req = max(10, sw)
-    if total_frames == 0 or int(np.sum(valid_mask)) < min_req:
-        raise ValueError(f"tilt valid frames insufficient: {int(np.sum(valid_mask))} < {min_req}")
+    valid_frames = int(np.sum(valid_mask))
+    if total_frames == 0 or valid_frames < min_req:
+        return empty_module_result("tilt", od, f"有效躯干帧不足：{valid_frames} < {min_req}")
 
     ls, rs, lh, rh = m.interpolate_keypoint_positions(coords)
     ms = (ls + rs) / 2.0
@@ -565,7 +594,7 @@ def run_tilt(task: Dict[str, Any]) -> Dict[str, Any]:
 
     raw = m.calculate_torso_tilt_angle_2d(mh, ms)
     if np.all(np.isnan(raw)):
-        raise ValueError("tilt raw angle is all NaN")
+        return empty_module_result("tilt", od, "肩/髋关键点无法形成有效躯干角度")
 
     corr = raw.copy()
     outlier_thr = float(p["outlier_diff_threshold"])
@@ -655,7 +684,7 @@ def run_shrug(task: Dict[str, Any]) -> Dict[str, Any]:
     n_sh = int(np.sum(vls & vrs))
     n_hip = int(np.sum(vlh & vrh))
     if total == 0 or n_sh < min_req or n_hip < min_req:
-        raise ValueError(f"shrug valid frames insufficient: shoulder={n_sh}, hip={n_hip}, need={min_req}")
+        return empty_module_result("shrug", od, f"有效帧不足：肩={n_sh}，髋={n_hip}，需要={min_req}")
 
     lsi = m.interpolate_single_coordinate(lsr, vls)
     rsi = m.interpolate_single_coordinate(rsr, vrs)
@@ -671,7 +700,7 @@ def run_shrug(task: Dict[str, Any]) -> Dict[str, Any]:
         lss, rss, lhs, rhs, fps, float(p["baseline_window_sec"])
     )
     if np.all(np.isnan(dist)):
-        raise ValueError("shrug distance signal all NaN")
+        return empty_module_result("shrug", od, "耸肩相对抬升信号全为无效值")
 
     rec, ana = m.recommend_shrug_distance_threshold(dist, coord_units=unit, method="gmm")
     final_thr = float(p["threshold_override"]) if p["threshold_override"] is not None else float(rec)
@@ -740,9 +769,28 @@ def run_displacement(task: Dict[str, Any]) -> Dict[str, Any]:
         kp = max(1, min(kp, kw - 1))
 
     pos, valid, _, unit = m.load_and_calculate_tracked_point_2d(jp, m.CENTROID_KP_INDICES, m.LOAD_MODE, conf)
+    tracking_mode_used = m.TRACKING_POINT_MODE
+    tracking_note = ""
     min_req = max(10, sw, int(float(p["baseline_window_sec"]) * fps * 1.1) if fps > 0 else 10, kw)
-    if int(np.sum(valid)) < (min_req + 1):
-        raise ValueError(f"displacement valid frames insufficient: {int(np.sum(valid))} < {min_req + 1}")
+    valid_count = int(np.sum(valid))
+    if valid_count < (min_req + 1) and getattr(m, "TRACKING_POINT_MODE", "") == "body_center":
+        shoulder_indices = (int(getattr(m, "LEFT_SHOULDER_IDX", 5)), int(getattr(m, "RIGHT_SHOULDER_IDX", 6)))
+        shoulder_pos, shoulder_valid, _, shoulder_unit = m.load_and_calculate_tracked_point_2d(jp, shoulder_indices, "mid_point", conf)
+        shoulder_valid_count = int(np.sum(shoulder_valid))
+        if shoulder_valid_count >= (min_req + 1):
+            pos = shoulder_pos
+            valid = shoulder_valid
+            unit = shoulder_unit
+            valid_count = shoulder_valid_count
+            tracking_mode_used = "mid_shoulder"
+            tracking_note = "髋部关键点不足，已自动回退为肩部中点位移分析"
+    if valid_count < (min_req + 1):
+        return empty_module_result(
+            "displacement",
+            od,
+            f"有效位移帧不足：{valid_count} < {min_req + 1}",
+            extra={"tracking_mode": tracking_mode_used},
+        )
 
     inter = m.interpolate_invalid_frames_2d(pos, valid)
     sm2d = m.smooth_positions_2d(inter, sw, sp)
@@ -750,7 +798,12 @@ def run_displacement(task: Dict[str, Any]) -> Dict[str, Any]:
 
     base_x, dev_x = m.calculate_baseline_and_deviation_x(x, fps, float(p["baseline_window_sec"]))
     if np.all(np.isnan(dev_x)):
-        raise ValueError("displacement deviation signal all NaN")
+        return empty_module_result(
+            "displacement",
+            od,
+            "位移偏差信号全为无效值",
+            extra={"tracking_mode": tracking_mode_used},
+        )
 
     vx, ax = m.compute_kinematics_x(x, fps, kw, kp)
     frame_dx = m.compute_frame_displacements_x(x)
@@ -777,7 +830,8 @@ def run_displacement(task: Dict[str, Any]) -> Dict[str, Any]:
     cand = m.detect_events_deviation_multi_threshold_x(dev_x, pa, mv, min_df, max_df, gap_df)
     events = m.analyze_and_classify_events_deviation_x(cand, dev_x, mv, frame_dx, x, vx, ax, fps, unit)
 
-    csv_name = f"{jp.stem}_events_{m.TRACKING_POINT_MODE}_devX_pa{pa:.1f}_mv{mv:.1f}.csv"
+    csv_mode = tracking_mode_used if tracking_mode_used != "mid_shoulder" else "mid_shoulder"
+    csv_name = f"{jp.stem}_events_{csv_mode}_devX_pa{pa:.1f}_mv{mv:.1f}.csv"
     csv = m.export_events_to_csv_x(events, od / csv_name)
 
     analysis_plot = None
@@ -795,7 +849,7 @@ def run_displacement(task: Dict[str, Any]) -> Dict[str, Any]:
         )
         analysis_plot = save_fig(fig, od / f"{jp.stem}_deviationX_analysis_final.png", 150)
 
-    return {
+    result = {
         "module": "displacement",
         "label": SPECS["displacement"]["label"],
         "status": "ok",
@@ -810,7 +864,11 @@ def run_displacement(task: Dict[str, Any]) -> Dict[str, Any]:
         "threshold_plot": threshold_plot,
         "analysis_plot": analysis_plot,
         "output_dir": str(od),
+        "tracking_mode": tracking_mode_used,
     }
+    if tracking_note:
+        result["note"] = tracking_note
+    return result
 
 
 def run_rotation(task: Dict[str, Any]) -> Dict[str, Any]:
@@ -837,9 +895,9 @@ def run_rotation(task: Dict[str, Any]) -> Dict[str, Any]:
         smooth_poly=sp,
     )
     if total == 0:
-        raise ValueError("rotation total frames is zero")
+        return empty_module_result("rotation", od, "转动分析无可用帧")
     if len(ang) == 0:
-        raise ValueError("rotation orientation change is empty")
+        return empty_module_result("rotation", od, "肩部朝向变化序列为空")
 
     rec, ana = m.recommend_rotation_threshold(ang, default_thresh=float(m.DEFAULT_ROTATION_THRESHOLD))
     final_thr = float(p["threshold_override"]) if p["threshold_override"] is not None else float(rec)
@@ -1062,7 +1120,7 @@ def run_pipeline(
     fps = float(config.get("fps", 30.0))
     min_conf = float(config.get("min_confidence", 0.3))
     save_plots = bool(config.get("save_plots", True))
-    run_parallel = bool(config.get("parallel", True))
+    run_parallel = False
 
     modules = config.get("modules", ORDER.copy())
     modules = [m for m in ORDER if m in modules]
@@ -1268,7 +1326,7 @@ def main():
     config["fps"] = ask_float("FPS", 30.0, lambda x: x > 0)
     config["min_confidence"] = ask_float("Min keypoint confidence", 0.3, lambda x: 0.0 <= x <= 1.0)
     config["save_plots"] = ask_bool("Save plots", True)
-    config["parallel"] = ask_bool("Run selected modules in parallel", True)
+    config["parallel"] = False
 
     modules = choose_modules()
     config["modules"] = modules
